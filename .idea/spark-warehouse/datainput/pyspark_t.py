@@ -390,7 +390,7 @@ if __name__ == "__main__":
         add_labels(rects2)
         # 图表输出到本地
         # plt.show()
-        plt.savefig("../"+filenpath+"/"+str(a[:,0][0])+"—"+str(a[:,0][num-1])+'.png')
+        plt.savefig("/lf/"+filenpath+"/"+str(a[:,0][0])+"—"+str(a[:,0][num-1])+'.png')
         plt.clf()
         return a[:,0][num-1]
 

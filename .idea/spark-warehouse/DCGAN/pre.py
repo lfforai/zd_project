@@ -119,28 +119,31 @@ if(check=="0"):
     import pyhdfs as pd
     import numpy as np
     fs = pd.HdfsClient("127.0.0.1", 9000)
-    #[filename]=fs.walk("/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001_1000_30.txt/")
-    [filename]=fs.walk("/lf/")
+    [filename]=fs.walk("/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001_1000_20_1.txt/")
+    #[filename]=fs.walk("/lf/")
     files_list=list(filename)
     files_local=[item for item in map(lambda x:str("hdfs://127.0.0.1:9000"+files_list[0])+str(x),list(files_list[2])[1:])]
     print(files_local)
 # //对抗神经网拟合
 #神经网构成
 #  MLP - used for D_pre, D1, D2, G networks
-    M=30 # minibatch size
-    pitch=100
-with tf.variable_scope("D1", reuse=tf.AUTO_REUSE):
-    # construct learnable parameters within local scope
-    w11=tf.get_variable("w10", [30, 50])*0.2
-    b11=tf.get_variable("b10", [50])*0.2
-    w21=tf.get_variable("w11", [50, 30])*0.2
-    b21=tf.get_variable("b11", [30])*0.2
-    w31=tf.get_variable("w12", [30, 15])*0.2
-    b31=tf.get_variable("b12", [15])*0.2
-    w41=tf.get_variable("w13", [15,1])*0.2
-    b41=tf.get_variable("b13", [1])*0.2
+    M=20 # minibatch size
+    pitch=200
+    rato=0.5
+    rato1=0.5
 
-    def mlp_D1(input):
+    with tf.variable_scope("D", reuse=tf.AUTO_REUSE):
+        # construct learnable parameters within local scope
+        w11=tf.get_variable("w10", [20, 50])
+        b11=tf.get_variable("b10", [50])
+        w21=tf.get_variable("w11", [50, 25])*rato
+        b21=tf.get_variable("b11", [25])*rato
+        w31=tf.get_variable("w12", [25, 10])*rato
+        b31=tf.get_variable("b12", [10])*rato
+        w41=tf.get_variable("w13", [10,1])
+        b41=tf.get_variable("b13", [1])
+
+        def mlp_D1(input):
             # construct learnable parameters within local scope
             # w11=tf.get_variable("w10", [input.get_shape()[1], 150], initializer=tf.random_normal_initializer())
             # b11=tf.get_variable("b10", [150], initializer=tf.constant_initializer(0.0))
@@ -151,44 +154,89 @@ with tf.variable_scope("D1", reuse=tf.AUTO_REUSE):
             # w41=tf.get_variable("w13", [35,1], initializer=tf.random_normal_initializer())
             # b41=tf.get_variable("b13", [1], initializer=tf.constant_initializer(0.0))
 
-            fc11=tf.nn.tanh(tf.matmul(input,w11)+b11)
-            fc11 = tf.nn.dropout(fc11, keep_prob=1.0)
-            fc12=tf.nn.tanh(tf.matmul(fc11,w21)+b21)
-            fc12 = tf.nn.dropout(fc12, keep_prob=1.0)
-            fc13=tf.nn.tanh(tf.matmul(fc12,w31)+b31)
-            fc13 = tf.nn.dropout(fc13, keep_prob=1.0)
+            fc11=tf.nn.sigmoid(tf.matmul(input,w11)+b11)
+            fc11 = tf.nn.dropout(fc11, keep_prob=0.5)
+            fc12=tf.nn.sigmoid(tf.matmul(fc11,w21)+b21)
+            fc12 = tf.nn.dropout(fc12, keep_prob=0.5)
+            fc13=tf.nn.sigmoid(tf.matmul(fc12,w31)+b31)
             fc14=tf.nn.tanh(tf.matmul(fc13,w41)+b41)
             return fc14, [w11,b11,w21,b21,w31,b31,w41,b41]
 
-    # D(x)
-    x_node=tf.placeholder(dtype=tf.float32, shape=(None,M))
-    # x_node=tf.placeholder(tf.float32, shape=(None,M)) # input M normally distributed floats
-    fc1,theta_d=mlp_D1(x_node) # output likelihood of being normally distributed
-    D1=tf.maximum(tf.minimum(fc1,.99), 0.01) # clamp as a probability
+            # D(x)
+        x_node=tf.placeholder(dtype=tf.float32, shape=(None,M))
+        # x_node=tf.placeholder(tf.float32, shape=(None,M)) # input M normally distributed floats
+        fc1,theta_d=mlp_D1(x_node) # output likelihood of being normally distributed
+        D1=tf.maximum(tf.minimum(fc1,.99), 0.01) # clamp as a probability
 
+    with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
+        w1=tf.get_variable("w0", [20, 300])
+        b1=tf.get_variable("b0", [300])
+        w2=tf.get_variable("w1", [300, 150])*rato1
+        b2=tf.get_variable("b1", [150])*rato1
+        w3=tf.get_variable("w2", [150, 75])*rato1
+        b3=tf.get_variable("b2", [75])*rato1
+
+        def mlp(input,output_dim,n_maxouts=5):
+            # construct learnable parameters within local scope
+            w1=tf.get_variable("w0", [input.get_shape()[1], 300], initializer=tf.random_normal_initializer())
+            b1=tf.get_variable("b0", [300], initializer=tf.constant_initializer(0.0))
+            w2=tf.get_variable("w1", [300, 150], initializer=tf.random_normal_initializer())
+            b2=tf.get_variable("b1", [150], initializer=tf.constant_initializer(0.0))
+            w3=tf.get_variable("w2", [150, 75], initializer=tf.random_normal_initializer())
+            b3=tf.get_variable("b2", [75], initializer=tf.constant_initializer(0.0))
+            #w4=tf.get_variable("w3", [75,output_dim], initializer=tf.random_normal_initializer())
+            #b4=tf.get_variable("b3", [output_dim], initializer=tf.constant_initializer(0.0))
+            # nn operators
+            fc1=tf.nn.tanh(tf.matmul(input,w1)+b1)
+            fc1= tf.nn.dropout(fc1, keep_prob=0.5)
+            fc2=tf.nn.tanh(tf.matmul(fc1,w2)+b2)
+            fc2= tf.nn.dropout(fc2, keep_prob=0.5)
+            fc3=tf.nn.tanh(tf.matmul(fc2,w3)+b3)
+            mo_list=[]
+            if n_maxouts>0 :
+                w = tf.get_variable('mo_w_0', [75,output_dim],initializer=tf.random_normal_initializer())
+                b = tf.get_variable('mo_b_0', [output_dim],initializer=tf.constant_initializer(0.0))
+                fc4 = tf.matmul(fc3, w) + b
+                mo_list.append(w)
+                mo_list.append(b)
+                for i in range(n_maxouts):
+                    if i>0:
+                        w = tf.get_variable('mo_w_%d' % i, [75,output_dim],initializer=tf.random_normal_initializer())
+                        b = tf.get_variable('mo_b_%d' % i, [output_dim],initializer=tf.constant_initializer(0.0))
+                        mo_list.append(w)
+                        mo_list.append(b)
+                        fc4=tf.stack([fc4,tf.matmul(fc3, w) + b],axis=-1)
+                        fc4 = tf.reduce_max(fc4,axis=-1)
+            else:
+                fc4=tf.matmul(fc3,w4)+b4
+            return fc4, [w1,b1,w2,b2,w3,b3].extend(mo_list)
+
+        z_node=tf.placeholder(dtype=tf.float32, shape=(None,M))
+        # print(z_node)
+        G,theta_g=mlp(z_node,M) # generate normal transformation of Z
 
     # with tf.device('/cpu:0'):
-    # prepair data--------------------------------------------------------------------------------------
+        # prepair data--------------------------------------------------------------------------------------
     def read_data(file_queue):
-        reader = tf.TextLineReader()
-        key, value = reader.read(file_queue)
-        defaults = [[0.0]]*M
-        # print(defaults)
-        list_value = tf.decode_csv(value, defaults)
-        list_value_tensor=tf.stack(list_value)
-        #因为使用的是鸢尾花数据集，这里需要对y值做转换
-        return list_value_tensor
+            reader = tf.TextLineReader()
+            key, value = reader.read(file_queue)
+            defaults = [[0.0]]*M
+            # print(defaults)
+            list_value = tf.decode_csv(value, defaults)
+            list_value_tensor=tf.stack(list_value)
+            #因为使用的是鸢尾花数据集，这里需要对y值做转换
+            return list_value_tensor
 
     def create_pipeline(filename, batch_size, num_epochs=None):
-        file_queue = tf.train.string_input_producer(filename,num_epochs=num_epochs)
-        example= read_data(file_queue)
-        min_after_dequeue = 2000
-        capacity = min_after_dequeue + batch_size
-        example_batch= tf.train.shuffle_batch(
-            [example], batch_size=batch_size, capacity=capacity,min_after_dequeue=min_after_dequeue
-        )
-        # print(example_batch)
-        return example_batch
+            file_queue = tf.train.string_input_producer(filename,num_epochs=num_epochs)
+            example= read_data(file_queue)
+            min_after_dequeue = 2000
+            capacity = min_after_dequeue + batch_size
+            example_batch= tf.train.shuffle_batch(
+                [example], batch_size=batch_size, capacity=capacity,min_after_dequeue=min_after_dequeue
+            )
+            # print(example_batch)
+            return example_batch
 
     # 开始训练
     x_train_batch= create_pipeline(files_local, pitch)
@@ -199,37 +247,38 @@ with tf.variable_scope("D1", reuse=tf.AUTO_REUSE):
     config.gpu_options.allow_growth = True
 
     with tf.Session(config=config) as sess:
-        saver.restore(sess, "/tool_lf/lf/model-17000.ckpt")
-        # sess.run(local_init_op)
-        # print(np.reshape(np.random.random(pitch*M),(pitch,M)))
-        # Start populating the filename queue.
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-        print("开始输出：")
-        int_num=0
-        print(sess.run(theta_d[0]))
-        print(sess.run(w11))
+            saver.restore(sess, "/tool_lf/lf/model-last.ckpt")
+            # sess.run(local_init_op)
+            # print(np.reshape(np.random.random(pitch*M),(pitch,M)))
+            # Start populating the filename queue.
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(coord=coord)
+            int_num=0
+            print("开始输出：")
+            try:
+                #while not coord.should_stop():
+                while True:
+                    #x=np.reshape(np.ones(M*pitch)*100000+np.random.normal(size=M*pitch)*2,(pitch,M))
+                    # print(x)
+                    # x=np.reshape(np.ones(M*pitch)*999+np.abs(np.random.normal(size=pitch*M)*1000),(pitch,M))
+                    #x=sess.run(x_train_batch)#sampled m-batch from zd_data
+                    # print(x)
+                    #x=np.sort(x,axis=1)
 
-        try:
-            #while not coord.should_stop():
-            while True:
-                # x=np.reshape(np.ones(M*pitch)*100000+np.random.normal(size=M*pitch)*2,(pitch,M))
-                # print(x)
-                # x=np.reshape(np.ones(M*pitch)*999+np.abs(np.random.normal(size=pitch*M)*1000000),(pitch,M))
-                x=sess.run(x_train_batch)#sampled m-batch from zd_data
-                # print(x)
-                x=np.sort(x,axis=1)
-                # print(x)
-                print("---------------")
-                print(sess.run(D1,feed_dict={x_node:x}))
-                int_num=int_num+1
-                if int_num==2:
-                    break
-        except tf.errors.OutOfRangeError:
-            print ('Done reading')
-        finally:
-            coord.request_stop()
-            coord.join(threads)
-        # save_path = saver.save(sess,"/tool_lf/lf/model-last.ckpt")
-        sess.close()
-        print ("--ok！--")
+                    # print(x)
+                    print("---------------")
+                    z=np.ones(shape=(M*pitch),dtype=float)*6+np.random.normal(size=M*pitch)
+                    z=np.sort(np.reshape(z,(pitch,M)),axis=1)
+                    #print(sess.run(D1,feed_dict={x_node:x}))
+                    print(sess.run(G,feed_dict={z_node:z}))
+                    int_num=int_num+1
+                    if int_num==10:
+                        break
+            except tf.errors.OutOfRangeError:
+                print ('Done reading')
+            finally:
+                coord.request_stop()
+                coord.join(threads)
+            # save_path = saver.save(sess,"/tool_lf/lf/model-last.ckpt")
+            sess.close()
+            print ("--ok！--")
