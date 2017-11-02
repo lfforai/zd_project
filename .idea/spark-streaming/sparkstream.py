@@ -124,7 +124,7 @@ def moving(iterator):
             value_list.append(float(i))
             num=num+1
         else:
-            rezult_list.append([float(i),np.sum(np.array(value_list)*weight_n,axis=-1)/n_moving])
+            rezult_list.append([float(i),np.sum(np.array(value_list)*weight_n,axis=-1)])
             value_list=[]
             num=0
     return rezult_list
@@ -134,15 +134,15 @@ def moving(iterator):
 #       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
 #       .count())
 
-# print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt")\
-#     .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1]))\
-#     .mapPartitions(olymic).filter(lambda x:x[0]/x[1]>2).count())
-#
-# print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
-#       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
-#       .mapPartitions(exponential_smoothing).filter(lambda x:x[0]/x[1]>2).count())
+print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt")\
+    .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1]))\
+    .mapPartitions(olymic).filter(lambda x:x[0]/x[1]>2).take(100))
 
 print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
-      .mapPartitions(moving).filter(lambda x:x[0]/x[1]>2).count())
+      .mapPartitions(exponential_smoothing).filter(lambda x:x[0]/x[1]>2).take(100))
 
+print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
+      .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
+      .mapPartitions(moving).filter(lambda x:x[0]/x[1]>2).collect())
+# print(np.sum(np.array([1,2,3])*np.array([1,2,3])))
