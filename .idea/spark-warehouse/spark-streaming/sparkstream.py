@@ -111,6 +111,7 @@ def olymic(iterator):
     return rezult_list
 
 #n阶段加权平滑法
+print("pk")
 n_moving=5
 weight=[0.3,0.25,0.2,0.15,0.1]
 def moving(iterator):
