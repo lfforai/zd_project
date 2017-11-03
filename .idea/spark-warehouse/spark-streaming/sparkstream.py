@@ -50,10 +50,14 @@ os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
 conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
 sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
+
+# from pyspark.context import SparkContext
+# sc_tf = SparkContext(conf=conf)
 
 # 路径
 import multiprocessing
@@ -61,7 +65,8 @@ import time
 import pyhdfs as pd
 import numpy as np
 fs = pd.HdfsClient("127.0.0.1", 9000)
-
+defaultFS = sc._jsc.hadoopConfiguration().get("fs.defaultFS")
+print(defaultFS)
 #n阶移动平均
 n_e_s=5
 times_e_s=1 #2,3
@@ -111,7 +116,6 @@ def olymic(iterator):
     return rezult_list
 
 #n阶段加权平滑法
-print("pk")
 n_moving=5
 weight=[0.3,0.25,0.2,0.15,0.1]
 def moving(iterator):
@@ -130,20 +134,26 @@ def moving(iterator):
             num=0
     return rezult_list
 
-#开始剔除异常数据
-# print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
-#       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
-#       .count())
+executors = sc._conf.get("SPARK_EXECUTOR_INSTANCES")
+print(executors)
+print("partitions:=",sc.textFile("hdfs://127.0.0.1:9000/test_dir/*").getNumPartitions())
+
+# 开始剔除异常数据
+print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
+      .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
+      .count())
 
 print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt")\
     .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1]))\
-    .mapPartitions(olymic).filter(lambda x:x[0]/x[1]>2).take(100))
+    .mapPartitions(olymic).filter(lambda x:x[0]/x[1]>3).take(100))
+
 
 print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
-      .mapPartitions(exponential_smoothing).filter(lambda x:x[0]/x[1]>2).take(100))
+      .mapPartitions(exponential_smoothing).filter(lambda x:x[0]/x[1]>3).take(100))
 
 print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/idea_ok/G_CFYH_2_035FQ001.txt") \
       .map(lambda x:str(x).split(",")).filter(lambda x:float(x[1])>0).map(lambda x:float(x[1])) \
-      .mapPartitions(moving).filter(lambda x:x[0]/x[1]>2).collect())
-# print(np.sum(np.array([1,2,3])*np.array([1,2,3])))
+      .mapPartitions(moving).filter(lambda x:x[0]/x[1]>3).collect())
+
+
