@@ -134,6 +134,9 @@ def moving(iterator):
             num=0
     return rezult_list
 
+# sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/G_CFYH_2_035FQ001.txt") \
+#     .take(100)
+
 executors = sc._conf.get("SPARK_EXECUTOR_INSTANCES")
 print(executors)
 print("partitions:=",sc.textFile("hdfs://127.0.0.1:9000/test_dir/*").getNumPartitions())

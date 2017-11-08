@@ -49,7 +49,7 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://192.168.1.70:7077")
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
@@ -70,9 +70,9 @@ def bl_file(file_dir="/data_zd/data/"):
 import multiprocessing
 import time
 import pyhdfs as pd
-fs = pd.HdfsClient("127.0.0.1", 9000)
+fs = pd.HdfsClient("192.168.1.67", 8020)
 
-def local_to_hdfs(hdfs_path="hdfs://127.0.0.1:9000/zd_data2/",local_filename="",file_hdfsname=""):
+def local_to_hdfs(hdfs_path="hdfs://192.168.1.67:8020/zd_data2/",local_filename="",file_hdfsname=""):
     if(file_hdfsname.__contains__("FS")):
         mid_path="FS/"
     else:
@@ -82,6 +82,7 @@ def local_to_hdfs(hdfs_path="hdfs://127.0.0.1:9000/zd_data2/",local_filename="",
             mid_path="FW/"
     if(not fs.exists("/zd_data2/"+mid_path+file_hdfsname)):
         print("存储开始："+hdfs_path+mid_path+file_hdfsname)
+        print(local_filename)
         rdd=sc.textFile("file://"+local_filename).repartition(1).saveAsTextFile(hdfs_path+mid_path+file_hdfsname)
         print("存储结束："+hdfs_path+mid_path+file_hdfsname)
     else:
@@ -96,7 +97,7 @@ def local_to_hdfs(hdfs_path="hdfs://127.0.0.1:9000/zd_data2/",local_filename="",
 
 # 按小时，分钟，加工数据
 def sub_each(file_hdfsname_all=" ",
-             ouput_root="hdfs://127.0.0.1:9000",
+             ouput_root="hdfs://192.168.1.67:8020",
              old_fold="/zd_data2/",
              new_fold="idea_ok/",
              filename="",
@@ -133,7 +134,7 @@ def sub_each(file_hdfsname_all=" ",
         # print(sc.textFile(file_hdfsname_all).map(lambda x:list(str(x).split(","))).first())
         if(fs.exists(old_fold+mid_path+new_fold+filename)):
             print("文件已有了")
-            # print(sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FQ/new/1.txt").first())
+            # print(sc.textFile("hdfs://192.168.1.67:8020/zd_data2/FQ/new/1.txt").first())
             rdd=sc.textFile(ouput_root+old_fold+mid_path+new_fold+filename).map(lambda x:str(x).split(",")) \
                 .map(lambda x:[str(x[0]).replace("\'",""),x[1],str(x[2]).replace("\'","").lstrip()]) \
                 .map(lambda x:[str(x[0]).replace("[",""),float(x[1]),str(x[2]).replace("]","")])
@@ -252,26 +253,26 @@ if __name__ == "__main__":
     result=[]
     print(len(local))
     for i  in range(len(local)):
-       local_to_hdfs("hdfs://127.0.0.1:9000/zd_data2/",local[i],hdfs[i])
+       local_to_hdfs("hdfs://192.168.1.67:8020/zd_data2/",local[i],hdfs[i])
     print("Sub-process(es) done.")
 
     # 提取小时数据
     filenum="35"
     # fs.delete("/zd_data2/rezult/"+filenum+".txt")
     if(not fs.exists("/zd_data2/rezult/"+filenum+".txt")):
-        FQ=sub_each("hdfs://127.0.0.1:9000/zd_data2/FQ/G_CFYH_2_0"+filenum+"FQ001.txt",filename="G_CFYH_2_0"+filenum+"FQ001.txt",time_fre="10minute")
+        FQ=sub_each("hdfs://192.168.1.67:8020/zd_data2/FQ/G_CFYH_2_0"+filenum+"FQ001.txt",filename="G_CFYH_2_0"+filenum+"FQ001.txt",time_fre="10minute")
         FQ.show(10)
-        FW=sub_each("hdfs://127.0.0.1:9000/zd_data2/FW/G_CFYH_2_0"+filenum+"FW001.txt",filename="G_CFYH_2_0"+filenum+"FW001.txt",time_fre="10minute")
+        FW=sub_each("hdfs://192.168.1.67:8020/zd_data2/FW/G_CFYH_2_0"+filenum+"FW001.txt",filename="G_CFYH_2_0"+filenum+"FW001.txt",time_fre="10minute")
         FW.show(10)
-        FS=sub_each("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_0"+filenum+"FS001.txt",filename="G_CFYH_2_0"+filenum+"FS001.txt",time_fre="10minute")
+        FS=sub_each("hdfs://192.168.1.67:8020/zd_data2/FS/G_CFYH_2_0"+filenum+"FS001.txt",filename="G_CFYH_2_0"+filenum+"FS001.txt",time_fre="10minute")
         FS.show(10)
         FQ.createOrReplaceTempView("FQ")
         FW.createOrReplaceTempView("FW")
         FS.createOrReplaceTempView("FS")
         sqlContext.sql("SELECT date_q,sum_n,avg_n,avg_f from FQ,FW,FS where date_w=date_q and date_q=date_f order by date_q") \
-            .repartition(1).write.mode("overwrite").parquet("hdfs://127.0.0.1:9000/zd_data2/rezult/"+filenum+".txt")
+            .repartition(1).write.mode("overwrite").parquet("hdfs://192.168.1.67:8020/zd_data2/rezult/"+filenum+".txt")
 
-    df=sqlContext.read.parquet("hdfs://127.0.0.1:9000/zd_data2/rezult/"+filenum+".txt")
+    df=sqlContext.read.parquet("hdfs://192.168.1.67:8020/zd_data2/rezult/"+filenum+".txt")
     df.createOrReplaceTempView("rezult") #        date|sub|rato|FQ|FW
     df=sqlContext.sql("select date_q as date,sum_n-avg_n as sub,(sum_n-avg_n)/sum_n*100 as rato,sum_n as FQ,avg_n as FW,avg_f as FS from rezult order by date_q")
     df.createOrReplaceTempView("rezult")
