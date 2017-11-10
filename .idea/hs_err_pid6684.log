@@ -1,0 +1,94 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f38c3c57ced, pid=6684, tid=0x00007f387bcc5700
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_144-b01) (build 1.8.0_144-b01)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.144-b01 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [libtensorflow_framework.so+0x4fbced]  std::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, float>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, float> >, std::__detail::_Select1st, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<true, false, true> >::_M_find_before_node(unsigned long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long) const+0x2d
+#
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread is native thread
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x000000000000003a
+
+Registers:
+RAX=0x000055ba142613e0, RBX=0x00007f38c45ab780, RCX=0x00007f387bcc3f10, RDX=0x00007f387bcc3f10
+RSP=0x00007f387bcc3cf0, RBP=0x00007f387bcc3d30, RSI=0x0000000000000000, RDI=0x00007f38c45ab780
+R8 =0xc6a4a7935bd1e995, R9 =0x00007f387bcc3f20, R10=0x00007f38bce525f8, R11=0x00007f38dae43f50
+R12=0x000000000000000a, R13=0x000055ba15c6d560, R14=0x1f68d9ac17a9a193, R15=0x0000000000000000
+RIP=0x00007f38c3c57ced, EFLAGS=0x0000000000010206, CSGSFS=0x002b000000000033, ERR=0x0000000000000004
+  TRAPNO=0x000000000000000e
+
+Top of Stack: (sp=0x00007f387bcc3cf0)
+0x00007f387bcc3cf0:   0000000000000006 00007f38bcbd4ce6
+0x00007f387bcc3d00:   00007f387bcc3d1c 00007f38bce57d28
+0x00007f387bcc3d10:   0000000000000030 00007f387bcc3f50
+0x00007f387bcc3d20:   00007f387bcc3f23 0000000000000004
+0x00007f387bcc3d30:   00007f387bcc4110 00007f38c3c5844e
+0x00007f387bcc3d40:   00007f3800000003 00007f38bce57dc8
+0x00007f387bcc3d50:   00007f38bce57d78 00007f38bce57d00
+0x00007f387bcc3d60:   00007f387bcc4128 00007f38bce57cd8
+0x00007f387bcc3d70:   00007f387bcc3f30 00007f38bce57d50
+0x00007f387bcc3d80:   00007f387bcc3f10 00007f386c0f5320
+0x00007f387bcc3d90:   00007f387bcc3f60 7943050559610300
+0x00007f387bcc3da0:   00007f3841200000 00007f387bcc4040
+0x00007f387bcc3db0:   000055ba1220f340 0000000000000020
+0x00007f387bcc3dc0:   0000000000000004 000055ba1220f340
+0x00007f387bcc3dd0:   00007f387bcc3e40 00007f38c3f93c30
+0x00007f387bcc3de0:   000000007bcc40e0 00007f386c000020
+0x00007f387bcc3df0:   0000000000000028 0000000000000001
+0x00007f387bcc3e00:   00007f387bcc4030 7943050559610300
+0x00007f387bcc3e10:   000055ba1220f340 00007f387bcc4040
+0x00007f387bcc3e20:   00007f386c274f60 00007f387bcc4030
+0x00007f387bcc3e30:   0000000000000001 000055ba1220f340
+0x00007f387bcc3e40:   00007f387bcc4010 00007f38c3b44f05
+0x00007f387bcc3e50:   00007f387bcc3f60 7943050559610300
+0x00007f387bcc3e60:   000000007bcc3ee0 0000000000000000
+0x00007f387bcc3e70:   0000000000000000 00007f386c183d50
+0x00007f387bcc3e80:   000055ba1549c778 00007f387bcc48b0
+0x00007f387bcc3e90:   00007f387bcc4070 00007f38c3b4d2c4
+0x00007f387bcc3ea0:   00007f387bcc43b0 0000000000000000
+0x00007f387bcc3eb0:   000000007bcc48b0 0000000000000000
+0x00007f387bcc3ec0:   000055ba1502db48 00007f38dad3353c
+0x00007f387bcc3ed0:   00007f387bcc3f60 00007f387bcc4090
+0x00007f387bcc3ee0:   00007f38780f8540 00007f387bcc3f90 
+
+Instructions: (pc=0x00007f38c3c57ced)
+0x00007f38c3c57ccd:   48 83 ec 18 48 8b 07 4c 8b 2c f0 4d 85 ed 74 3e
+0x00007f38c3c57cdd:   4d 8b 65 00 49 89 ce 49 89 f7 48 89 d1 48 89 fb
+0x00007f38c3c57ced:   4d 8b 44 24 30 4d 39 c6 74 44 66 0f 1f 84 00 00
+0x00007f38c3c57cfd:   00 00 00 4d 8b 0c 24 4d 85 c9 74 12 4d 8b 41 30 
+
+Register to memory mapping:
+
+RAX=0x000055ba142613e0 is an unknown value
+RBX=0x00007f38c45ab780: <offset 0xe4f780> in /root/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so at 0x00007f38c375c000
+RCX=0x00007f387bcc3f10 is an unknown value
+RDX=0x00007f387bcc3f10 is an unknown value
+RSP=0x00007f387bcc3cf0 is an unknown value
+RBP=0x00007f387bcc3d30 is an unknown value
+RSI=0x0000000000000000 is an unknown value
+RDI=0x00007f38c45ab780: <offset 0xe4f780> in /root/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so at 0x00007f38c375c000
+R8 =0xc6a4a7935bd1e995 is an unknown value
+R9 =0x00007f387bcc3f20 is an unknown value
+R10=0x00007f38bce525f8: _ZTVN10__cxxabiv121__vmi_class_type_infoE+0x10 in /root/anaconda3/bin/../lib/libstdc++.so.6 at 0x00007f38bcae5000
+R11=0x00007f38dae43f50: <offset 0x194f50> in /lib/x86_64-linux-gnu/libc.so.6 at 0x00007f38dacaf000
+R12=0x000000000000000a is an unknown value
+R13=0x000055ba15c6d560 is an unknown value
+R14=0x1f68d9ac17a9a193 is an unknown value
+R15=0x0000000000000000 is an unknown value
+
+
+Stack: [0x00007f387b4c5000,0x00007f387bcc6000],  sp=0x00007f387bcc3cf0,  free space=8187k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [libtensorflow_framework.so+0x4fbced]  std::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, float>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, float> >, std::__detail::_Select1st, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<true, false, true> >::_M_find_before_node(unsigned long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long) const+0x2d
+C  [libtensorflow_framework.so+0x4fc44e]
