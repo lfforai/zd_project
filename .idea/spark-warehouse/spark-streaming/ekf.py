@@ -99,44 +99,43 @@ def map_fun(args, ctx):
         marknum=0
         p_num=0
         # #按gpu个数分发
-        with tf.device(gpu_num):
+        with tf.device("/cpu:0"):
             if(args.mode=="train"):
+                a_t=tf.get_variable(name='a_t',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                a_t_t_1=tf.get_variable(name='a_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                p_t_t_1=tf.get_variable(name='p_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                #y=tf.get_variable(name='y',dtype=tf.float32,shape=[list_length],initializer=tf.zeros_initializer,trainable=False)
+                y=tf.placeholder(dtype=tf.float32, shape=(None))
+
+                T = tf.Variable(1,name="T",dtype=tf.float32) #测量参数
+                Z = tf.Variable(1,name="Z",dtype=tf.float32) #测量参数
+                H = tf.Variable(0.001,name="H",dtype=tf.float32) #测量系统偏差
+                Q = tf.Variable(0.001,name="Q",dtype=tf.float32) #测量系统偏差
+                d = tf.Variable(0.05,name="d",dtype=tf.float32)
+                c = tf.Variable(0.05,name="c",dtype=tf.float32)
+                global_step = tf.Variable(0,dtype=tf.int64,trainable=False)
                 for i in range(args.steps):
                     if(tf_feed.should_stop()):
                        tf_feed.terminate()
                     print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-                    saver = tf.train.Saver()
-                    if marknum==0 or num!=p_num:
+                    if marknum==0 or not str(num).__eq__(p_num):
                        logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
                        marknum=marknum+1
                        p_num=num
                        print("logdir================:",logdir)
                     list_length=batch_ys.__len__()
-                    a_t=tf.get_variable(name='a_t',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
-                    a_t_t_1=tf.get_variable(name='a_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
-                    p_t_t_1=tf.get_variable(name='p_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
-                    p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
-                    #y=tf.get_variable(name='y',dtype=tf.float32,shape=[list_length],initializer=tf.zeros_initializer,trainable=False)
-                    y=tf.placeholder(dtype=tf.float32, shape=(None))
-
-                    T = tf.Variable(1,name="T",dtype=tf.float32) #测量参数
-                    Z = tf.Variable(1,name="Z",dtype=tf.float32) #测量参数
-                    H = tf.Variable(0.001,name="H",dtype=tf.float32) #测量系统偏差
-                    Q = tf.Variable(0.001,name="Q",dtype=tf.float32) #测量系统偏差
-                    d = tf.Variable(0.05,name="d",dtype=tf.float32)
-                    c = tf.Variable(0.05,name="c",dtype=tf.float32)
+                    print("batch_ys.__len__():=",batch_ys.__len__())
                     # T = tf.placeholder(dtype=tf.float32, shape=(None)) #状态参数
                     # Q = tf.placeholder(dtype=tf.float32, shape=(None)) #状态偏差
                     # T = tf.placeholder(dtype=tf.float32, shape=(None)) #状态参数
                     # Q = tf.placeholder(dtype=tf.float32, shape=(None)) #状态偏差
-                    global_step = tf.Variable(0,dtype=tf.int64,trainable=False)
-
                     array_list=[]
                     array_list1=[]
                     var_list=[T,Z,H,Q,d]
 
-                    for i in range(batch_ys.__len__()):
+                    for j in range(batch_ys.__len__()):
                         if i==0:
                             a_t_t_1=tf.assign(a_t_t_1,T*batch_ys[0]+c)#1
                             p_t_t_1=tf.assign(p_t_t_1,T*Q*T+Q)#2
@@ -159,26 +158,30 @@ def map_fun(args, ctx):
                             array_list1.append(F)
 
                     y_st_sum=tf.stack(array_list,axis=-1)
-                    print("y",y_st_sum)
                     F_sum=tf.stack(array_list1,axis=-1)
-                    loss=-(tf.reduce_sum(tf.log(tf.abs(F_sum)))/2+tf.reduce_sum((y-y_st_sum)*(1/F_sum)*(y-y_st_sum))/2)
+                    loss=(tf.reduce_sum(tf.log(tf.abs(F_sum)))/2+tf.reduce_sum((y-y_st_sum)*(1/F_sum)*(y-y_st_sum))/2)
                     train_op = tf.train.AdadeltaOptimizer(learning_rate=0.001,rho=0.85).minimize(
-                        1-loss, global_step=global_step)
+                         loss, global_step=global_step)
                     init_op = tf.global_variables_initializer()
                     local_init_op = tf.local_variables_initializer()
                     saver = tf.train.Saver()
                     with tf.Session() as sess:
-                        sess.run(init_op)
-                        sess.run(local_init_op)
-                        print(sess.run(loss,feed_dict={y:batch_ys}))
-                        for i in range(int(2500)):
+                        if i==0:
+                           sess.run(init_op)
+                           sess.run(local_init_op)
+                        else:
+                           saver.restore(sess,logdir)
+                           print("Model restored.")
+
+                        print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                        for i in range(int(100)):
                             # sess.run(tf.initialize_all_variables())
                             sess.run(train_op,feed_dict={y:batch_ys})
                         save_path = saver.save(sess, logdir)
                         print("Model saved in file: %s" % save_path)
                         # saver.restore(sess,"/tmp/my-model")
-                        print(sess.run(loss,feed_dict={y:batch_ys}))
-                        print(sess.run(H))
+                        print("after ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                        print("H:=",sess.run(H))
                     sess.close()
                     # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()
@@ -196,6 +199,7 @@ def map_fun(args, ctx):
                 a_t_t_1=tf.get_variable(name='a_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
                 p_t_t_1=tf.get_variable(name='p_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
                 p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+
                 # Add ops to save and restore all the variables.
                 while not tf_feed.should_stop():
                     num,(batch_xs, batch_ys)= feed_dict(tf_feed.next_batch(batch_size))
@@ -205,15 +209,15 @@ def map_fun(args, ctx):
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
                     }
 
-                    if marknum==0 or num!=p_num:
+                    if marknum==0 or not str(num).__eq__(p_num):
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
                         marknum=marknum+1
                         p_num=num
 
-                    saver = tf.train.Saver()
                     init_op = tf.global_variables_initializer()
                     local_init_op = tf.local_variables_initializer()
                     rezult=[]
+                    saver = tf.train.Saver()
                     with tf.Session() as sess:
                         saver.restore(sess,logdir)
                         print("Model restored.")
@@ -229,7 +233,8 @@ def map_fun(args, ctx):
                                 p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
                                 #预测的y_st
                                 sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
-                                rezult.append((batch_ys[0],sess.run(Z*a_t+d)))
+                                rep=sess.run(Z*a_t+d)
+                                rezult.append((batch_ys[i],rep,batch_ys[i]-rep))
                             else:
                                 a_t_t_1=tf.assign(a_t_t_1,T*a_t+c)#1
                                 p_t_t_1=tf.assign(p_t_t_1,T*p_t_1*T+Q)#2
@@ -239,14 +244,15 @@ def map_fun(args, ctx):
                                 p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
                                 #预测的y_st
                                 sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
-                                rezult.append((batch_ys[i],sess.run(Z*a_t+d)))
-                        num_lack=batch_size-results.__len__()
+                                rep=sess.run(Z*a_t+d)
+                                rezult.append((batch_ys[i],rep,batch_ys[i]-rep))
+                        num_lack=batch_size-result.__len__()
                         if num_lack>0:
-                           results.extend([["o","o","o"]]*num_lack)
-                        tf_feed.batch_results(results)
+                           result.extend([["o","o","o"]]*num_lack)
+                        tf_feed.batch_results(result)
             tf_feed.terminate()
 
-conf=SparkConf().setMaster("spark://titianx:7077")
+conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
 sc=SparkContext(conf=conf)
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 # sc =spark.sparkContext
@@ -254,7 +260,7 @@ sc=SparkContext(conf=conf)
 
 executors = sc._conf.get("spark.executor.instances")
 print("executors:=",executors)
-num_executors = int(executors) if executors is not None else 8
+num_executors = int(executors) if executors is not None else 4
 num_ps = 0
 
 parser = argparse.ArgumentParser()
@@ -378,7 +384,7 @@ dataRDD1=sc.union(a).mapPartitions(func1)
 # dataRDD1=sc.parallelize(range(600),3).mapPartitionsWithIndex(func)
 # print("getNumPartitions:=",dataRDD1.getNumPartitions())
 args.mode='inference'
-args.batch_size=300
+args.batch_size=240
 args.epochs=1
 print(args.mode)
 cluster1 = TFCluster.run(sc, map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
