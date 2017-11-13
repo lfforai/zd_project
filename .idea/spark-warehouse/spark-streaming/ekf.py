@@ -95,7 +95,6 @@ def map_fun(args, ctx):
         else:
             gpu_num="/gpu:{0}".format(int(ctx.task_index%get_available_gpus_len()))
         print("gpu:=====================",gpu_num)
-
         logdir=''
         marknum=0
         p_num=0
@@ -120,10 +119,11 @@ def map_fun(args, ctx):
                     p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
                     #y=tf.get_variable(name='y',dtype=tf.float32,shape=[list_length],initializer=tf.zeros_initializer,trainable=False)
                     y=tf.placeholder(dtype=tf.float32, shape=(None))
+
                     T = tf.Variable(1,name="T",dtype=tf.float32) #测量参数
                     Z = tf.Variable(1,name="Z",dtype=tf.float32) #测量参数
-                    H = tf.Variable(0.0001,name="H",dtype=tf.float32) #测量系统偏差
-                    Q = tf.Variable(0.0001,name="Q",dtype=tf.float32) #测量系统偏差
+                    H = tf.Variable(0.001,name="H",dtype=tf.float32) #测量系统偏差
+                    Q = tf.Variable(0.001,name="Q",dtype=tf.float32) #测量系统偏差
                     d = tf.Variable(0.05,name="d",dtype=tf.float32)
                     c = tf.Variable(0.05,name="c",dtype=tf.float32)
                     # T = tf.placeholder(dtype=tf.float32, shape=(None)) #状态参数
@@ -136,24 +136,24 @@ def map_fun(args, ctx):
                     array_list1=[]
                     var_list=[T,Z,H,Q,d]
 
-                    for i in range(int(batch_ys.__len__())):
+                    for i in range(batch_ys.__len__()):
                         if i==0:
-                            tf.assign(a_t_t_1,T*batch_ys[0]+c)#1
-                            tf.assign(p_t_t_1,T*Q*T+Q)#2
+                            a_t_t_1=tf.assign(a_t_t_1,T*batch_ys[0]+c)#1
+                            p_t_t_1=tf.assign(p_t_t_1,T*Q*T+Q)#2
 
                             F=Z*p_t_t_1*Z+H#3
-                            tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[0]-Z*a_t_t_1-d))#4
-                            tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
+                            a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[0]-Z*a_t_t_1-d))#4
+                            p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
                             #预测的y_st
                             array_list.append(Z*a_t+d)
                             array_list1.append(F)
                         else:
-                            tf.assign(a_t_t_1,T*a_t+c)#1
-                            tf.assign(p_t_t_1,T*p_t_1*T+Q)#2
+                            a_t_t_1=tf.assign(a_t_t_1,T*a_t+c)#1
+                            p_t_t_1=tf.assign(p_t_t_1,T*p_t_1*T+Q)#2
 
                             F=Z*p_t_t_1*Z+H#3
-                            tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[i]-Z*a_t_t_1-d))#4
-                            tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
+                            a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[i]-Z*a_t_t_1-d))#4
+                            p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
                             #预测的y_st
                             array_list.append(Z*a_t+d)
                             array_list1.append(F)
@@ -161,9 +161,9 @@ def map_fun(args, ctx):
                     y_st_sum=tf.stack(array_list,axis=-1)
                     print("y",y_st_sum)
                     F_sum=tf.stack(array_list1,axis=-1)
-                    loss=-(tf.reduce_sum(tf.log(tf.abs(F_sum))/2)+tf.reduce_sum((y-y_st_sum)*(1/F_sum)*(y-y_st_sum)/2))
+                    loss=-(tf.reduce_sum(tf.log(tf.abs(F_sum)))/2+tf.reduce_sum((y-y_st_sum)*(1/F_sum)*(y-y_st_sum))/2)
                     train_op = tf.train.AdadeltaOptimizer(learning_rate=0.001,rho=0.85).minimize(
-                        loss, global_step=global_step)
+                        1-loss, global_step=global_step)
                     init_op = tf.global_variables_initializer()
                     local_init_op = tf.local_variables_initializer()
                     saver = tf.train.Saver()
@@ -171,45 +171,79 @@ def map_fun(args, ctx):
                         sess.run(init_op)
                         sess.run(local_init_op)
                         print(sess.run(loss,feed_dict={y:batch_ys}))
-                        for i in range(int(2000)):
+                        for i in range(int(2500)):
                             # sess.run(tf.initialize_all_variables())
                             sess.run(train_op,feed_dict={y:batch_ys})
-                        save_path = saver.save(sess, "/tmp/model.ckpt")
+                        save_path = saver.save(sess, logdir)
                         print("Model saved in file: %s" % save_path)
                         # saver.restore(sess,"/tmp/my-model")
                         print(sess.run(loss,feed_dict={y:batch_ys}))
                         print(sess.run(H))
                     sess.close()
-                        # time.sleep((worker_num + 1) * 5)
+                    # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()
 
             else:#测试
+                tf.reset_default_graph()
+                # Create some variables.
+                T = tf.Variable(0.05,name="T",dtype=tf.float32) #测量参数
+                Z = tf.Variable(0.05,name="Z",dtype=tf.float32) #测量参数
+                H = tf.Variable(0.01,name="H",dtype=tf.float32) #测量系统偏差
+                Q = tf.Variable(0.0001,name="Q",dtype=tf.float32) #测量系统偏差
+                d = tf.Variable(0.0001,name="d",dtype=tf.float32)
+                c = tf.Variable(0.0001,name="c",dtype=tf.float32)
+                a_t=tf.get_variable(name='a_t',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                a_t_t_1=tf.get_variable(name='a_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                p_t_t_1=tf.get_variable(name='p_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
+                # Add ops to save and restore all the variables.
                 while not tf_feed.should_stop():
                     num,(batch_xs, batch_ys)= feed_dict(tf_feed.next_batch(batch_size))
+                    list_length=batch_ys.__len__()
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
                     }
+
                     if marknum==0 or num!=p_num:
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
                         marknum=marknum+1
                         p_num=num
-                    ar = tf.contrib.timeseries.ARRegressor(
-                        periodicities=200, input_window_size=30, output_window_size=10,
-                        num_features=1,
-                        loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
-                    reader_N = NumpyReader(data)
-                    evaluation_input_fn = tf.contrib.timeseries.WholeDatasetInputFn(reader_N)
-                    #keys of evaluation: ['covariance', 'loss', 'mean', 'observed', 'start_tuple', 'times', 'global_step']
-                    evaluation = ar.evaluate(input_fn=evaluation_input_fn, steps=1)
-                    _y=list(evaluation['mean'].reshape(-1))
-                    y=list(data['values'].reshape(-1))
-                    results =[[e,l,e-l] for e,l in zip(_y,y)]
-                    # results =[(ctx.task_index,e) for e in batch_ys]
-                    num_lack=batch_size-results.__len__()
-                    if num_lack>0:
-                       results.extend([["o","o","o"]]*num_lack)
-                    tf_feed.batch_results(results)
+
+                    saver = tf.train.Saver()
+                    init_op = tf.global_variables_initializer()
+                    local_init_op = tf.local_variables_initializer()
+                    rezult=[]
+                    with tf.Session() as sess:
+                        saver.restore(sess,logdir)
+                        print("Model restored.")
+                        # sess.run(init_op)
+                        # sess.run(local_init_op)
+                        for i in range(batch_ys.__len__()):
+                            if i==0:
+                                a_t_t_1=tf.assign(a_t_t_1,T*batch_ys[0]+c)#1
+                                p_t_t_1=tf.assign(p_t_t_1,T*Q*T+Q)#2
+
+                                F=Z*p_t_t_1*Z+H#3
+                                a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[0]-Z*a_t_t_1-d))#4
+                                p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
+                                #预测的y_st
+                                sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
+                                rezult.append((batch_ys[0],sess.run(Z*a_t+d)))
+                            else:
+                                a_t_t_1=tf.assign(a_t_t_1,T*a_t+c)#1
+                                p_t_t_1=tf.assign(p_t_t_1,T*p_t_1*T+Q)#2
+
+                                F=Z*p_t_t_1*Z+H#3
+                                a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[i]-Z*a_t_t_1-d))#4
+                                p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
+                                #预测的y_st
+                                sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
+                                rezult.append((batch_ys[i],sess.run(Z*a_t+d)))
+                        num_lack=batch_size-results.__len__()
+                        if num_lack>0:
+                           results.extend([["o","o","o"]]*num_lack)
+                        tf_feed.batch_results(results)
             tf_feed.terminate()
 
 conf=SparkConf().setMaster("spark://titianx:7077")
@@ -229,7 +263,7 @@ parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default
 # parser.add_argument("-f", "--format", help="example format: (csv|pickle|tfr)", choices=["csv","pickle","tfr"], default="csv")
 # parser.add_argument("-i", "--images", help="HDFS path to MNIST images in parallelized format")
 # parser.add_argument("-l", "--labels", help="HDFS path to MNIST labels in parallelized format")
-parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="AR_model")
+parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="ekf_model")
 parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=num_executors)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
 parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=4)
@@ -284,25 +318,26 @@ def sample_map(fraction_base,rato):
 # dataRDD8_count=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_041FS001.txt") \
 #     .map(lambda x:str(x).split(",")).map(lambda x:(8,float(x[1]))).count()
 
-fraction_base,rato=100000,0.75
+fraction_base,rato=5000,0.75
 dataRDD1=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_034FS001.txt")\
-.map(lambda x:str(x).split(",")).map(lambda x:(1,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+.map(lambda x:str(x).split(",")).map(lambda x:("34FS",float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
 dataRDD2=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_035FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(2,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+    .map(lambda x:str(x).split(",")).map(lambda x:("35FS",float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
 dataRDD3=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_039FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(3,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+    .map(lambda x:str(x).split(",")).map(lambda x:("39FS",float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
 dataRDD4=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_041FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(4,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
-dataRDD5=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_034FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(5,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
-dataRDD6=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_035FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(6,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
-dataRDD7=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_039FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(7,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
-dataRDD8=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_041FS001.txt") \
-    .map(lambda x:str(x).split(",")).map(lambda x:(8,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+    .map(lambda x:str(x).split(",")).map(lambda x:("41FS",float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+# dataRDD5=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_034FS001.txt") \
+#     .map(lambda x:str(x).split(",")).map(lambda x:(5,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+# dataRDD6=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_035FS001.txt") \
+#     .map(lambda x:str(x).split(",")).map(lambda x:(6,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+# dataRDD7=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_039FS001.txt") \
+#     .map(lambda x:str(x).split(",")).map(lambda x:(7,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
+# dataRDD8=sc.textFile("hdfs://127.0.0.1:9000/zd_data2/FS/G_CFYH_2_041FS001.txt") \
+#     .map(lambda x:str(x).split(",")).map(lambda x:(8,float(x[1]))).mapPartitions(sample_map(fraction_base,rato)).repartition(1)
 
-a=[dataRDD1,dataRDD2,dataRDD3,dataRDD4,dataRDD5,dataRDD6,dataRDD7,dataRDD8]
+a=[dataRDD1,dataRDD2,dataRDD3,dataRDD4]
+#,dataRDD5,dataRDD6,dataRDD7,dataRDD8]
 dataRDD=sc.union(a)
 print(dataRDD.take(100))
 rdd_count=dataRDD.count()
@@ -318,7 +353,7 @@ print("partition:=",dataRDD.getNumPartitions())
 
 if rdd_count<1000:
    args.epochs=2
-   args.batch_size=rdd_count
+   args.batch_size=1000
 else:
    args.epochs=1
    args.batch_size=1000
