@@ -26,19 +26,21 @@ def normal_probability(min,max,y,n=50000,p=0.95,gpu_num="0"):
     import numpy as np
     import tensorflow as tf
 
-    def normal_probability_density(y,h=-1):
+    def normal_probability_density(y_input,h=-1):
         #均值=0,标准差=h的正态分布的概率密度函数
         def _map_func(x):
             pi=3.141592654
             if h==-1:#1/n^(0.2)
                 h=tfy.shape[0]
-                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
+                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y_input),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
             else:
-                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
+                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y_input),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
             return rezult
         return _map_func
 
     with tf.device("/cpu:"+str(gpu_num)):
+         #y_ts=tf.placeholder(dtype=tf.float32, shape=(None))
+         y_ts=tf.convert_to_tensor(y)
          value_big=tf.get_variable("value_big",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
          value_little=tf.get_variable("value_little",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
          value_now=tf.get_variable("value_now",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
@@ -55,13 +57,13 @@ def normal_probability(min,max,y,n=50000,p=0.95,gpu_num="0"):
          local_init_op = tf.local_variables_initializer()
          with tf.Session(config=config) as sess:
               while True:
-                    p_now=tf.reduce_sum(tf.data.Dataset.from_tensor_slices(np.linspace(1,1,n)*dx) \
-                                        .map(lambda x:min_cast+x).map(normal_probability_density(y))
+                    p_now=tf.reduce_sum(tf.data.Dataset.from_tensor_slices(min_cast+tf.convert_to_tensor(linspace(1,n,n))*dx) \
+                                        .map(normal_probability_density(y))
                                         .map(lambda x:x*dx)
                                         )
-                    p_now_np=sess.run(p_now)
+                    p_now_np=sess.run(p_now,feed_dict={y:batch_ys})
                     if p_now_np-p<0.005 and p_now_np-p>-0.005:
-                        rezult=sess.run(value_now)
+                        rezult=sess.run(value_now,feed_dict={y:batch_ys})
                         break
                     else:
                         if p_now_np>p:#big保留,little调整
