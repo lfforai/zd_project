@@ -1,5 +1,5 @@
 
-
+#./spark-submit --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4"  ~/IdeaProjects/pyspark_t/.idea/spark-warehouse/spark-streaming/exp.py
 
 from __future__ import absolute_import
 from __future__ import division
@@ -18,7 +18,7 @@ import sys
 import tensorflow as tf
 import threading
 import time
-import ekf_model_mapfunc
+import KDE_model_mapfunc
 from datetime import datetime
 
 from tensorflowonspark import TFCluster
@@ -52,7 +52,7 @@ parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default
 # parser.add_argument("-f", "--format", help="example format: (csv|pickle|tfr)", choices=["csv","pickle","tfr"], default="csv")
 # parser.add_argument("-i", "--images", help="HDFS path to MNIST images in parallelized format")
 # parser.add_argument("-l", "--labels", help="HDFS path to MNIST labels in parallelized format")
-parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="ekf_model")
+parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="KDE_model")
 parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=num_executors)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
 parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=4)
@@ -148,7 +148,7 @@ else:
     args.batch_size=1000
 
 # print("getNumPartitions:=",dataRDD.getNumPartitions())
-cluster = TFCluster.run(sc, ekf_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+cluster = TFCluster.run(sc, KDE_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
 # if args.mode == "train":
 cluster.train(dataRDD, args.epochs)
 cluster.shutdown()
@@ -166,14 +166,14 @@ def func1(iter):
 dataRDD1=sc.union(a).mapPartitions(func1)
 # dataRDD1=sc.parallelize(range(600),3).mapPartitionsWithIndex(func)
 # print("getNumPartitions:=",dataRDD1.getNumPartitions())
-args.mode='inference'
-args.batch_size=300
-args.epochs=1
-args.steps=1
-print(args.mode)
-cluster1 = TFCluster.run(sc, ekf_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-labelRDD = cluster1.inference(dataRDD1)
-print(labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).collect())# .saveAsTextFile(args.output)
-cluster1.shutdown()
+# args.mode='inference'
+# args.batch_size=300
+# args.epochs=1
+# args.steps=1
+# print(args.mode)
+# cluster1 = TFCluster.run(sc, ekf_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+# labelRDD = cluster1.inference(dataRDD1)
+# print(labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).collect())# .saveAsTextFile(args.output)
+# cluster1.shutdown()
 print("-----------------inference over-------------------------------")
 print("{0} ===== Stop".format(datetime.now().isoformat()))

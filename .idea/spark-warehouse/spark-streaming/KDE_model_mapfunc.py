@@ -86,7 +86,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
             x1=min_cast+list_dx*dx
             print(sess.run(x1))
 
-            rdd_dataset=tf.contrib.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_threads=16).map(lambda x2:x2*dx,num_threads=16)
+            rdd_dataset=tf.contrib.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_threads=2).map(lambda x2:x2*dx,num_threads=2)
 
             iterator = rdd_dataset.make_initializable_iterator()
             sess.run(iterator.initializer)
@@ -175,13 +175,15 @@ def map_fun(args, ctx):
         marknum=0
         p_num=0
         # #按gpu个数分发
-        with tf.device(gpu_num):
+        with tf.device("/cpu:0"):
             if(args.mode=="train"):
                print("no need train")
+               # Add ops to save and restore all the variables.
+               num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
+               #寻找F（x）大于95%或者5%的异常值点
+               p,p_value=normal_probability(batch_ys,n=3000,p=0.85,gpu_num="0")
+               print("概率：=%f，分位值：=%f"%(p,p_value))
             else:#测试
-              # Add ops to save and restore all the variables.
-              num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-              #寻找F（x）大于95%或者5%的异常值点
-              p,p_value=normal_probability(batch_ys,n=3000,p=0.85,gpu_num="0")
-              print("概率：=%f，分位值：=%f"%(p,p_value))
+               print("ok")
+
 
