@@ -119,8 +119,6 @@ hdfs_dir="/zd_data11.14/"
 if False:
    delete_hdfs(hdfs_path=deletefilename,addrs="127.0.0.1",port="50070")
 
-print("\n")
-
 if False:
 #单个本地文件上传
    local_to_hdfs(hdfs_path=hdfs_dir,addrs="127.0.0.1",port="50070",local_filename=local_dir+local_to_hdfs_filename,file_hdfsname=file_hdfsname)

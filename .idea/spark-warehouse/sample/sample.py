@@ -59,54 +59,54 @@ sc.parallelize(range(10000)).map(lambda x:x^2).take(100)
 # from pyspark.context import SparkContext
 # sc_tf = SparkContext(conf=conf)
 
-# # 路径
-# import multiprocessing
-# import time
-# import pyhdfs as pd
-# import numpy as np
-# fs = pd.HdfsClient("127.0.0.1", 9000)
+# 路径
+import multiprocessing
+import time
+import pyhdfs as pd
+import numpy as np
+fs = pd.HdfsClient("127.0.0.1", 9000)
+
+#把字符串拆解为
+#['G_NMWL_2_080FQ001', 'G_NMWL', 'G_NMWL_2_080|FQ001']
+def fuc(iterator):
+    value_list=[]
+    for a in iterator:
+        for j in range(str(a).__len__()):
+            len=str(a).__len__()
+            if j>0 and j<len-3:
+                if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
+                        and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
+                        index2=str(a).find("_",2)
+                        value_list.append([a[0:j+1],a[0:index2]+"|"+a[0:j+1]+"|"+str(a)])
+    return value_list
+
+rdd=sc.textFile("hdfs://127.0.0.1:9000/test_dir/title.txt")\
+    .map(lambda x:str(x).replace("\'",""))\
+    .map(lambda x:str(x).split(",")[0])\
+    .mapPartitions(fuc)
+
+def add(x,y):
+   return str(x)+"|"+str(y)
+
+#['G_NMWL_2_080FQ001', 'G_NMWL', 'G_NMWL_2_080|FQ001']
+def fuc2(iterator):
+    value_list=[]
+    for a in iterator:
+        index2=str(a[0]).find("_",2)
+        value_list.append([str(a[0])[0:index2],a[1]])
+    return value_list
+
+rdd=rdd.map(lambda x:[x[0],(str(x[1]).split("|"))[2]]).sortByKey(lambda x:x[0])\
+    .reduceByKey(add).mapPartitions(fuc2)
+print(rdd.count())
+fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,0.03)).collect())
+rdd=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0)
+rdd.flatMap(lambda x:str(x[1]).split("|")).repartition(1).saveAsTextFile("hdfs://127.0.0.1:9000/test_dir/sample.txt")
+
+
 #
-# #把字符串拆解为
-# #['G_NMWL_2_080FQ001', 'G_NMWL', 'G_NMWL_2_080|FQ001']
-# def fuc(iterator):
-#     value_list=[]
-#     for a in iterator:
-#         for j in range(str(a).__len__()):
-#             len=str(a).__len__()
-#             if j>0 and j<len-3:
-#                 if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
-#                         and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
-#                         index2=str(a).find("_",2)
-#                         value_list.append([a[0:j+1],a[0:index2]+"|"+a[0:j+1]+"|"+str(a)])
-#     return value_list
-#
-# rdd=sc.textFile("hdfs://127.0.0.1:9000/test_dir/title.txt")\
-#     .map(lambda x:str(x).replace("\'",""))\
-#     .map(lambda x:str(x).split(",")[0])\
-#     .mapPartitions(fuc)
-#
-# def add(x,y):
-#    return str(x)+"|"+str(y)
-#
-# #['G_NMWL_2_080FQ001', 'G_NMWL', 'G_NMWL_2_080|FQ001']
-# def fuc2(iterator):
-#     value_list=[]
-#     for a in iterator:
-#         index2=str(a[0]).find("_",2)
-#         value_list.append([str(a[0])[0:index2],a[1]])
-#     return value_list
-#
-# rdd=rdd.map(lambda x:[x[0],(str(x[1]).split("|"))[2]]).sortByKey(lambda x:x[0])\
-#     .reduceByKey(add).mapPartitions(fuc2)
-# print(rdd.count())
-# fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,0.03)).collect())
-# rdd=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0)
-# rdd.flatMap(lambda x:str(x[1]).split("|")).repartition(1).saveAsTextFile("hdfs://127.0.0.1:9000/test_dir/sample.txt")
-#
-#
-# #
-# # print(rdd.map(lambda x:[x[0],(str(x[1]).split("|"))[2]]).reduceByKey(add)
-# #       .take(1000))
-#     # sampleByKey(withReplacement = false,0.1,seed=None)
-#
-#
+# print(rdd.map(lambda x:[x[0],(str(x[1]).split("|"))[2]]).reduceByKey(add)
+#       .take(1000))
+    # sampleByKey(withReplacement = false,0.1,seed=None)
+
+
