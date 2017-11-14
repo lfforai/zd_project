@@ -21,58 +21,106 @@ def get_available_gpus_len():
     local_device_protos = _device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU'].__len__()
 
-def normal_probability(min,max,y,n=50000,p=0.95,gpu_num="0"):
+#用反复逼近求解法计算分位数
+def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
     #用反复逼近的方式迭代求最接近最大值的
     import numpy as np
     import tensorflow as tf
 
-    def normal_probability_density(y_input,h=-1):
-        #均值=0,标准差=h的正态分布的概率密度函数
-        def _map_func(x):
-            pi=3.141592654
-            if h==-1:#1/n^(0.2)
-                h=tfy.shape[0]
-                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y_input),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
-            else:
-                result=tf.reduce_mean(tf.exp(-tf.pow(tf.exp(x-y_input),2)/(tf.pow(h)*2.0))/(tf.pow(pi*2,0.5)*h))
-            return rezult
-        return _map_func
+    # with tf.device("/gpu:"+str(gpu_num)):
+    #y_in=tf.placeholder(dtype=tf.float32,shape=(None))
+    print(y)
 
-    with tf.device("/cpu:"+str(gpu_num)):
-         #y_ts=tf.placeholder(dtype=tf.float32, shape=(None))
-         y_ts=tf.convert_to_tensor(y)
-         value_big=tf.get_variable("value_big",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
-         value_little=tf.get_variable("value_little",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
-         value_now=tf.get_variable("value_now",shape=[],dtype=tf.float32,trainable=False,initializer=tf.zeros_initializer)
-         min_cast=tf.constant(name="min_cast",value=min)#下限
-         config = tf.ConfigProto()#luofeng jia
-         config.gpu_options.allow_growth=True
-         #赋值
-         value_big=tf.assign(value_big,max)
-         value_little=tf.assign(value_little,min)
-         value_now=tf.assign(value_now,value_big)
-         dx=(value_now-value_little)/n
-         p_now_np=0
-         init_op = tf.global_variables_initializer()
-         local_init_op = tf.local_variables_initializer()
-         with tf.Session(config=config) as sess:
-              while True:
-                    p_now=tf.reduce_sum(tf.data.Dataset.from_tensor_slices(min_cast+tf.convert_to_tensor(linspace(1,n,n))*dx) \
-                                        .map(normal_probability_density(y))
-                                        .map(lambda x:x*dx)
-                                        )
-                    p_now_np=sess.run(p_now,feed_dict={y:batch_ys})
-                    if p_now_np-p<0.005 and p_now_np-p>-0.005:
-                        rezult=sess.run(value_now,feed_dict={y:batch_ys})
-                        break
-                    else:
-                        if p_now_np>p:#big保留,little调整
-                            value_big=value_now
-                            value_now=(value_big-value_little)/2
-                        else:
-                            value_little=value_now
-                            value_now=(value_big-value_little)/2
-    return p_now_np,rezult
+    def normal_probability_density(y_in,x_t):
+        #均值=0,标准差=h的正态分布的概率密度函数
+        def map_func(x_s):
+            pi=tf.constant(3.141592654,dtype=tf.float32)
+            h=1.0/tf.pow(tf.constant(y.__len__(),dtype=tf.float32),0.2)
+            result_in=tf.reduce_mean(tf.exp(-tf.pow(x_s-x_t-y_in,2)/(tf.pow(h,2)*2.0))/(tf.pow(pi*2.0,0.5)*h))
+            return result_in
+        return map_func
+
+    # def normal_probability_density(x_s,y_in,x_t):
+    #     #均值=0,标准差=h的正态分布的概率密度函数
+    #     pi=tf.constant(3.141592654,dtype=tf.float32)
+    #     h=1.0/tf.pow(tf.constant(y.__len__(),dtype=tf.float32),0.2)
+    #     result_in=tf.reduce_mean(tf.exp(-tf.pow((x_s-x_t-y_in),2)/(tf.pow(h,2)*2.0))/(tf.pow(pi*2.0,0.5)*h))
+    #     # print(tf.Session().run(result_in))
+    #     return result_in
+
+    config = tf.ConfigProto()#luofeng jia
+    config.gpu_options.allow_growth=True
+
+
+    value_big=tf.get_variable("value_big",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    value_little=tf.get_variable("value_little",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    value_now=tf.get_variable("value_now",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    result=tf.get_variable("result",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    dx=tf.get_variable("dx",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    x1=tf.get_variable("x1",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+    iterator=tf.get_variable("iterator",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
+
+    #赋值
+    y_in=tf.convert_to_tensor(y,dtype=tf.float32)
+    min_cast=tf.convert_to_tensor(y.min()-2,dtype=tf.float32)#下限
+    list_dx=tf.convert_to_tensor(np.linspace(1,n,n),dtype=tf.float32)
+
+    init_op = tf.global_variables_initializer()
+    local_init_op = tf.local_variables_initializer()
+
+    value_big_tmp=y.max()+2
+    value_little_tmp=y.min()-2
+    value_now_tmp=value_big_tmp
+
+    result=0
+    while True:
+        with tf.Session(config=config) as sess:
+            sess.run(init_op)
+            sess.run(local_init_op)
+            value_big=tf.convert_to_tensor(value_big_tmp,dtype=tf.float32)
+            value_little=tf.convert_to_tensor(value_little_tmp,dtype=tf.float32)
+            value_now=tf.convert_to_tensor(value_now,dtype=tf.float32)
+            result=0
+            p_now_np=0
+            dx=(value_now-min_cast)/n
+            x1=min_cast+list_dx*dx
+            print(sess.run(x1))
+
+            rdd_dataset=tf.contrib.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_threads=16).map(lambda x2:x2*dx,num_threads=16)
+
+            iterator = rdd_dataset.make_initializable_iterator()
+            sess.run(iterator.initializer)
+
+            for i in range(int(n)):
+                try:
+                    result=result+iterator.get_next()
+                except tf.errors.OutOfRangeError:
+                    break
+                    # for i  in range(n):
+                    #   result=result+(normal_probability_density(x1[i],dx/2,y_in))*dx
+
+                    # print("result:=",
+            p_now_np=sess.run(result)
+            print("p_now_np",p_now_np)
+            if np.abs(p_now_np-p)<0.001:
+                result=sess.run(value_now)
+                break
+            else:
+                print("继续")
+                if p_now_np>p:#big保留,little调整
+                    value_big=value_now
+                    value_now=(value_big+value_little)/2
+                    value_now_tmp=sess.run(value_now)
+                    value_big_tmp=sess.run(value_big)
+                    value_little_tmp=sess.run(value_little)
+                else:
+                    value_little=value_now
+                    value_now=(value_big+value_little)/2
+                    value_now_tmp=sess.run(value_now)
+                    value_big_tmp=sess.run(value_big)
+                    value_little_tmp=sess.run(value_little)
+        sess.close()
+    return p_now_np,result
 
 def map_fun(args, ctx):
     from tensorflowonspark import TFNode
@@ -118,7 +166,7 @@ def map_fun(args, ctx):
         #print("tensorflow model path: {0}".format(logdir))
         tf_feed = TFNode.DataFeed(ctx.mgr, args.mode == "train")
 
-        if(get_available_gpus_len()==0):
+        if(get_available_gpus_len()==15):
             gpu_num="/cpu:0"
         else:
             gpu_num="/gpu:{0}".format(int(ctx.task_index%get_available_gpus_len()))
@@ -129,21 +177,11 @@ def map_fun(args, ctx):
         # #按gpu个数分发
         with tf.device(gpu_num):
             if(args.mode=="train"):
-              print("no need train")
+               print("no need train")
             else:#测试
               # Add ops to save and restore all the variables.
               num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-              y=tf.placeholder(dtype=tf.float32, shape=(None))
               #寻找F（x）大于95%或者5%的异常值点
-              max_limit=tf.reduce_min(y)+1000
-              min_limit=tf.reduce_max(y)+1000
-              p_95=normal_probability(min_limit,max_limit,p=0.95)
-              p_05=normal_probability(min_limit,max_limit,p=0.05)
-
-
-
-
-
-
-
+              p,p_value=normal_probability(batch_ys,n=3000,p=0.85,gpu_num="0")
+              print("概率：=%f，分位值：=%f"%(p,p_value))
 
