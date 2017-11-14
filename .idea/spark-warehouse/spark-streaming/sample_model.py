@@ -94,6 +94,14 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
 FQW,cz_FQW=sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070", \
                  group_num=4,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 
+
+
+
+
+
+
+
+##############################################################################
 from dateutil import parser
 #处理将不规范的日期调整成规范日期
 rdd=sc.textFile("hdfs://127.0.0.1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
@@ -127,6 +135,6 @@ def fuc(iterator):
         num=num+1
     return rezult
 
-print(rdd.sortBy(lambda x:x[2]).map(lambda x:[x[1],x[2]]).mapPartitions(fuc).take(100))
+#print(rdd.sortBy(lambda x:x[2]).map(lambda x:[x[1],x[2]]).mapPartitions(fuc).take(100))
 #错误数据：[[['6802171.0', '2016-01-16 19:02:13'], ['0.0', '2016-01-16 19:02:20'], ['6802171.0', '2016-01-16 19:02:26'], ['0.0', '2016-01-16 19:02:33'], ['6802171.0', '2016-01-16 19:02:39']]]
 
