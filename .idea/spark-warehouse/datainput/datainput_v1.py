@@ -42,10 +42,10 @@ def local_to_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",loca
     fs_pyhdfs = pd.HdfsClient(addrs,port)
     fs_hdfs = Client("http://"+addrs+":"+port)
 
-    if(file_hdfsname.__contains__("FS")):
+    if(file_hdfsname.__contains__("FS") or file_hdfsname.__contains__("NS")):
         mid_path="FS/"
     else:
-        if(file_hdfsname.__contains__("FQ")):
+        if(file_hdfsname.__contains__("FQ") or file_hdfsname.__contains__("NQ")):
             mid_path="FQ/"
         else:
             mid_path="FW/"

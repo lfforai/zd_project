@@ -32,6 +32,8 @@ spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
 sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 
+
+#一、#############################################################################
 #文件名分解函数，把原点名分解为原点名字、厂站、原点设备
 #['G_CFMY', 'Q', 'G_CFMY_1_001', 'G_CFMY_1_001FQ001.txt']
 def fuc(iterator):
@@ -67,12 +69,12 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
           total_fname_list.extend([e for e in func(fs_hdfs.list(i))])
 
       rdd=sc.parallelize(total_fname_list).map(lambda x:[str(x[0])+"|"+str(x[1]),x[3]])
-      print(rdd.take(10))
+
       #按FQ，FS，FW分层抽样：每个厂站都必须有原点样本，其中抽样比率按sample_rato
       fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS)).collect())
-      print(fractions)
+
       list_total=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).collect()
-      print(list_total)
+
       #FQ，FW，FS
       FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("Q"),list_total))
       FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("S"),list_total))
@@ -95,13 +97,49 @@ FQW,cz_FQW=sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/
                  group_num=4,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 
 
+def rdd_sample(fractions,ep_len):
+    import numpy as np
+    import random
+    #在每个rdd的每个partition中按fractions的比例进行样本抽样
+    #抽样比例：fractions,每个partiton的预估比例ep_len
+    #时序模型需要，抽取连续的区间
+    def map_func(iter):
+         start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
+         length=fractions*ep_len#抽样长度
+         result=[]
+         num=0
+         for i in iter:
+            if num>start_point and num<length:
+                result.append(i)
+            num=num+1
+         return result
+    return map_func
 
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=1,fractions=0.3):
+    yd_num=list(filelist).__len__()
+    all_rdd_list=[]#所有点的list集合
+    if(yd_num%work_num==0):#需要拟合的点数量正好等于work数量
+        for i in filelist:
+            cz_name=i[0]#厂站名字
+            eq_type=i[1]#原点种类 F功率 Q电量 S风速
+            filename_list=[filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            print(filename_list)
+            cz_rdd_list=[]#每个厂+Q，W，F
+            for j in filename_list:
+              #每个原点按照比例进行抽样
+              rdd_tmp=sc.textFile(j)
+              eachpartitions_len=int(rdd_tmp.count()/rdd_tmp.getNumPartitions()*0.9)
+              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len)).repartition(1)#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+              cz_rdd_list.append(rdd_tmp)
+            all_rdd_list.append([cz_name+"|"+eq_type,sc.union(cz_rdd_list)])
+    else:
+       print("luoeng!")
+    for rdd in all_rdd_list:
+       print(rdd[0],rdd[1].take(100))
 
+sample_file_to_rdd(sc,filelist=cz_FQW)
 
-
-
-
-##############################################################################
+#二、#############################################################################
 from dateutil import parser
 #处理将不规范的日期调整成规范日期
 rdd=sc.textFile("hdfs://127.0.0.1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
