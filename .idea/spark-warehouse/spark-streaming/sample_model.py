@@ -28,9 +28,9 @@ os.environ["HADOOP_USER_NAME"] = "root"
 conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
 
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
-spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
-sc =spark.sparkContext
-sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
+# spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
+# sc =spark.sparkContext
+# sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 
 
 #一、#############################################################################
@@ -93,29 +93,29 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
-FQW,cz_FQW=sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070", \
-                 group_num=4,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 
+#厂站-QSW
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.40):
 
-def rdd_sample(fractions,ep_len):
-    import numpy as np
-    import random
-    #在每个rdd的每个partition中按fractions的比例进行样本抽样
-    #抽样比例：fractions,每个partiton的预估比例ep_len
-    #时序模型需要，抽取连续的区间
-    def map_func(iter):
-         start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
-         length=fractions*ep_len#抽样长度
-         result=[]
-         num=0
-         for i in iter:
-            if num>start_point and num<length:
-                result.append(i)
-            num=num+1
-         return result
-    return map_func
+    def rdd_sample(fractions,ep_len):
+        import numpy as np
+        import random
+        #在每个rdd的每个partition中按fractions的比例进行样本抽样
+        #抽样比例：fractions,每个partiton的预估比例ep_len
+        #时序模型需要，抽取连续的区间
+        def map_func(iter):
+            start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
+            length=fractions*ep_len#抽样长度
+            result=[]
+            num=0
+            for i in iter:
+                if num>start_point and num<length:
+                    value=str(i).split(",")
+                    result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
+                num=num+1
+            return result
+        return map_func
 
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=4,fractions=0.3):
     yd_num=list(filelist).__len__()
     all_rdd_list=[]#所有点的list集合
     if(yd_num==work_num):#需要拟合的点数量正好等于work数量
@@ -129,36 +129,19 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=4,fr
               #每个原点按照比例进行抽样
               rdd_tmp=sc.textFile(j)
               eachpartitions_len=int(rdd_tmp.count()/rdd_tmp.getNumPartitions()*0.9)
-              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len)).repartition(1)#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
               cz_rdd_list.append(rdd_tmp)
-            all_rdd_list.append([cz_name+"|"+eq_type,sc.union(cz_rdd_list)])
+            all_rdd_list.append(sc.union(cz_rdd_list).repartition(1))
     else:
        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
     return  all_rdd_list
 
-num=0
-spark_work=4
-list_tmp=[]
-for i in list(cz_FQW):
-    if num==0:
-       list_tmp.append(i)
-       num=num+1
-    else:
-       if num%spark_work==0:
-          ex=sample_file_to_rdd(sc,filelist=list_tmp)
-          for rdd in ex:
-            print(rdd[0],rdd[1].take(100))
-            print("-------")
-          list_tmp=[]
-          num=num+1
-          list_tmp.append(i)
-       else:
-          list_tmp.append(i)
-          num=num+1
 
 #二、############################################################################
 from dateutil import parser
 #处理将不规范的日期调整成规范日期
+spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
+sc =spark.sparkContext
 rdd=sc.textFile("hdfs://127.0.0.1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
     .map(lambda x:[x[0],x[1],str(parser.parse(str(x[2])))])
 
@@ -189,7 +172,7 @@ def fuc(iterator):
                list_five_value.append(i)
         num=num+1
     return rezult
-
+spark.stop()
 #print(rdd.sortBy(lambda x:x[2]).map(lambda x:[x[1],x[2]]).mapPartitions(fuc).take(100))
 #错误数据：[[['6802171.0', '2016-01-16 19:02:13'], ['0.0', '2016-01-16 19:02:20'], ['6802171.0', '2016-01-16 19:02:26'], ['0.0', '2016-01-16 19:02:33'], ['6802171.0', '2016-01-16 19:02:39']]]
 

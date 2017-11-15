@@ -143,12 +143,12 @@ print("partition:=",dataRDD.getNumPartitions())
 # dataRDD=sc.parallelize(range(150003),3).mapPartitionsWithIndex(func)
 # print(dataRDD.take(100))
 
-if rdd_count<500000:
+if rdd_count<100000:
    args.epochs=2
    args.batch_size=rdd_count
 else:
    args.epochs=1
-   args.batch_size=500000
+   args.batch_size=100000
 
 # print("getNumPartitions:=",dataRDD.getNumPartitions())
 cluster = TFCluster.run(sc, map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
