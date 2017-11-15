@@ -115,15 +115,15 @@ def rdd_sample(fractions,ep_len):
          return result
     return map_func
 
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=1,fractions=0.3):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=4,fractions=0.3):
     yd_num=list(filelist).__len__()
     all_rdd_list=[]#所有点的list集合
-    if(yd_num%work_num==0):#需要拟合的点数量正好等于work数量
+    if(yd_num==work_num):#需要拟合的点数量正好等于work数量
         for i in filelist:
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
             filename_list=[filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
-            print(filename_list)
+            # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
             for j in filename_list:
               #每个原点按照比例进行抽样
@@ -133,13 +133,30 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=cz_FQW,work_num=1,fr
               cz_rdd_list.append(rdd_tmp)
             all_rdd_list.append([cz_name+"|"+eq_type,sc.union(cz_rdd_list)])
     else:
-       print("luoeng!")
-    for rdd in all_rdd_list:
-       print(rdd[0],rdd[1].take(100))
+       print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
+    return  all_rdd_list
 
-sample_file_to_rdd(sc,filelist=cz_FQW)
+num=0
+spark_work=4
+list_tmp=[]
+for i in list(cz_FQW):
+    if num==0:
+       list_tmp.append(i)
+       num=num+1
+    else:
+       if num%spark_work==0:
+          ex=sample_file_to_rdd(sc,filelist=list_tmp)
+          for rdd in ex:
+            print(rdd[0],rdd[1].take(100))
+            print("-------")
+          list_tmp=[]
+          num=num+1
+          list_tmp.append(i)
+       else:
+          list_tmp.append(i)
+          num=num+1
 
-#二、#############################################################################
+#二、############################################################################
 from dateutil import parser
 #处理将不规范的日期调整成规范日期
 rdd=sc.textFile("hdfs://127.0.0.1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
