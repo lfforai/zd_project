@@ -93,11 +93,10 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
-
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.40):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.30,max_sample_length=50000):
 
-    def rdd_sample(fractions,ep_len):
+    def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
         import random
         #在每个rdd的每个partition中按fractions的比例进行样本抽样
@@ -106,6 +105,8 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
         def map_func(iter):
             start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
             length=fractions*ep_len#抽样长度
+            if length>max_length:#最大抽样长度
+                 length=max_length
             result=[]
             num=0
             for i in iter:
@@ -128,14 +129,16 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
             for j in filename_list:
               #每个原点按照比例进行抽样
               rdd_tmp=sc.textFile(j)
-              eachpartitions_len=int(rdd_tmp.count()/rdd_tmp.getNumPartitions()*0.9)
-              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+              partitions_num=rdd_tmp.getNumPartitions()
+              total_count=rdd_tmp.count()
+              each_max_limit=max_sample_length/partitions_num
+              eachpartitions_len=int(total_count/partitions_num*0.9)
+              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
               cz_rdd_list.append(rdd_tmp)
             all_rdd_list.append(sc.union(cz_rdd_list).repartition(1))
     else:
        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
     return  all_rdd_list
-
 
 #二、############################################################################
 from dateutil import parser
