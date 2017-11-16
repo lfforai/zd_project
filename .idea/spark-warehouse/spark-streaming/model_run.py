@@ -1,6 +1,6 @@
 # 导入本地文件放入
-#./spark-submit --py-files ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/sample_model.py ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/AR_model_mapfunc.py  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/KDE_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4"  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/model_run.py
-
+#/tool_lf/spark/spark-2.2.0-bin-hadoop2.7/sbin/spark-submit --py-files sample_model.py,AR_model_mapfunc.py,KDE_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4" model_run.py
+# cd /
 from pyspark.conf import SparkConf
 import argparse
 import os
@@ -11,6 +11,10 @@ import threading
 import time
 from datetime import datetime
 
+import sample_model
+import AR_model_mapfunc
+import KDE_model_mapfunc
+
 from tensorflowonspark import TFCluster
 import pyspark.sql as sql_n       #spark.sql
 from pyspark import SparkContext  # pyspark.SparkContext dd
@@ -20,10 +24,6 @@ from hdfs import *
 client_N = Client("http://127.0.0.1:50070")
 
 from pyspark.sql.types import *
-
-import sample_model
-import AR_model_mapfunc
-import KDE_model_mapfunc
 
 schema = StructType([
     StructField("id",  StringType(), True),
@@ -71,13 +71,12 @@ FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_
                             group_num=4,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 sc.stop()
 
-
 def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     global client_N
 
     num_executors = spark_worker_num
     num_ps = 0
-
+    print("----------------AR-train start-------------------------------")
     #删除存储模型参数用目录
     if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
         client_N.delete("/user/root/model/",recursive=True)
@@ -90,24 +89,28 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     # if args.mode == "train":
     cluster.train(dataRDD, args.epochs)
     cluster.shutdown()
-    print("-----------------train over-------------------------------")
+    print("----------------AR-train over-------------------------------")
 
+    print("----------------AR-inference over--------------------------")
     args.mode='inference'
     args.batch_size=int(rdd_count*0.90/spark_worker_num/5)
     args.epochs=1
     print(args.mode)
     cluster1 = TFCluster.run(sc, AR_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster1.inference(dataRDD)
-    print(labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).take(100))# .saveAsTextFile(args.output)
+    labelRDD = labelRDD.filter(lambda x:not str(x[0]).__eq__('o'))# .saveAsTextFile(args.output)
     cluster1.shutdown()
-    print("-----------------inference over-------------------------------")
+    print("----------------AR-inference over--------------------------")
 
-    cluster = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    args.batch_size=int(rdd_count*0.90/spark_worker_num)
+
+    print("----------------KDE-inference start--------------------------")
+    cluster2 = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    args.batch_size=int(labelRDD.count()*0.90/spark_worker_num)
     # if args.mode == "train":
-    labelRDD2=cluster.inference(labelRDD, args.epochs)
+    labelRDD2=cluster2.inference(labelRDD, args.epochs)
     print(labelRDD2.filter(lambda x:not str(x[0]).__eq__('o')).take(100))
-    cluster.shutdown()
+    cluster2.shutdown()
+    print("----------------KDE-inference over--------------------------")
     print("{0} ===== Stop".format(datetime.now().isoformat()))
 
 #启动进程，按每worker个为一组进行进行数据分解

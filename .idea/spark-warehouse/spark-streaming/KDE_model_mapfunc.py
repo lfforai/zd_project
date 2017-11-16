@@ -179,6 +179,7 @@ def map_func(args, ctx):
             if(args.mode=="train"):
                  print("no need train")
             else:#测试
+                print("no need train")
                 while not tf_feed.should_stop():
                     # Add ops to save and restore all the variables.
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
