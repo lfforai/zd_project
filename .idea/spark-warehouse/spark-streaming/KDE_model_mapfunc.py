@@ -193,7 +193,7 @@ def map_func(args, ctx):
                      p_down,p_value_down=normal_probability(batch_ys,n=1500,p=0.05,gpu_num="0")
                      print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
 
-                    rezult=list(filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,list[zip(batch_ys,batch_xs)]))
+                    result=list(filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs)))
                     num_lack=len-result.__len__()
                     if num_lack>0:
                         result.extend([["o","o"]]*num_lack)

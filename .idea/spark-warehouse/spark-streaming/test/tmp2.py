@@ -49,9 +49,14 @@ x=[1,2,3]
 y=[[2,1],[3,4],[5,6]]
 z=[4,5,6]
 w=zip(x,y)
+
+for i in zip(x,y):
+     print(i)
+rezult=list(filter(lambda x:x[0]<2,zip(x,y)))
+print(rezult)
 # for x in w:
 #     print(x[1][0])
-print([e[1] for e in zip(x,z)])
+# print([e[1] for e in zip(x,z)])
 # y=np.array([16,36,46,56,56,56,65])
 # pi=3.1415926
 # x=54
