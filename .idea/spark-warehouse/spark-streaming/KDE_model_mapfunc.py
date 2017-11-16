@@ -51,7 +51,6 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
     config = tf.ConfigProto()#luofeng jia
     config.gpu_options.allow_growth=True
 
-
     value_big=tf.get_variable("value_big",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
     value_little=tf.get_variable("value_little",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
     value_now=tf.get_variable("value_now",shape=[],dtype=tf.float32,initializer=tf.zeros_initializer)
@@ -122,7 +121,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
         sess.close()
     return p_now_np,result
 
-def map_fun(args, ctx):
+def map_func(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -146,19 +145,20 @@ def map_fun(args, ctx):
         # Convert from [(images, labels)] to two numpy arrays of the proper type
         partitionnum=0
         y = []
+        x = []
         i=0
         for item in batch:
             if(i==0):
                 partitionnum=item[0]
-                y.append(item[1])
+                y.append(item[3])
+                x.append([item[1],item[2],item[4]])
                 i=i+1
             else:
-                y.append(item[1])
+                y.append(item[3])
+                x.append([item[1],item[2],item[4]])
         ys = numpy.array(y)
         ys = ys.astype(numpy.float32)
-        xs=numpy.array(range(ys.__len__()))
-        xs=xs.astype(numpy.float32)
-        return partitionnum,(xs, ys)
+        return partitionnum,(x, ys)
 
     if job_name == "ps":
         server.join()
@@ -177,13 +177,21 @@ def map_fun(args, ctx):
         # #按gpu个数分发
         with tf.device("/cpu:0"):
             if(args.mode=="train"):
-               print("no need train")
-               # Add ops to save and restore all the variables.
-               num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-               #寻找F（x）大于95%或者5%的异常值点
-               p,p_value=normal_probability(batch_ys,n=3000,p=0.85,gpu_num="0")
-               print("概率：=%f，分位值：=%f"%(p,p_value))
+                 print("no need train")
             else:#测试
-               print("ok")
+                while not tf_feed.should_stop():
+                    # Add ops to save and restore all the variables.
+                    num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
 
+                    #寻找F（x）大于95%或者5%的异常值点
+                    p_up,p_value_up=normal_probability(batch_ys,n=3000,p=0.95,gpu_num="0")
+                    print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
 
+                    p_down,p_value_down=normal_probability(batch_ys,n=3000,p=0.05,gpu_num="0")
+                    print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
+
+                    rezult=filter(lambda x:x[0]>p_value_up or x[0]<p_value_down,list[zip(batch_ys,batch_xs)])
+                    num_lack=batch_size-results.__len__()
+                    if num_lack>0:
+                        results.extend([["o","o"]]*num_lack)
+                    tf_feed.batch_results(results)

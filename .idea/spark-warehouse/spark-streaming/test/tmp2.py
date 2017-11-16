@@ -26,26 +26,31 @@ os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
 conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
 
-# os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
-spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
-sc =spark.sparkContext
-sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
+# # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
+# spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
+# sc =spark.sparkContext
+# sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
+#
+# def map_fnc(iter):
+#     rezult=[]
+#     num=0
+#     for i in iter:
+#         num=num+1
+#     rezult.append(num)
+#     return rezult
+#
+# rdd=sc.parallelize(range(100000000))
+# print(rdd.getNumPartitions())
+# print(rdd.mapPartitions(map_fnc).collect())
+# print(sc.parallelize(range(100)).repartition(1).collect())
+#       # .mapPartitions(map_fnc).repartition(1).collect())
 
-def map_fnc(iter):
-    rezult=[]
-    num=0
-    for i in iter:
-        num=num+1
-    rezult.append(num)
-    return rezult
-
-rdd=sc.parallelize(range(100000000))
-print(rdd.getNumPartitions())
-print(rdd.mapPartitions(map_fnc).collect())
-print(sc.parallelize(range(100)).repartition(1).collect())
-      # .mapPartitions(map_fnc).repartition(1).collect())
-
-
+x=[1,2,3]
+y=[[2,1],[3,4],[5,6]]
+z=[4,5,6]
+w=zip(x,y)
+for x in w:
+    print(x[1][0])
 # y=np.array([16,36,46,56,56,56,65])
 # pi=3.1415926
 # x=54

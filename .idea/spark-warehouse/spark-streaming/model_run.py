@@ -1,5 +1,6 @@
 # 导入本地文件放入
-#./spark-submit --py-files ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/sample_model.py ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/AR_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4"  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/model_run.py
+#./spark-submit --py-files ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/sample_model.py ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/AR_model_mapfunc.py  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/KDE_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4"  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/model_run.py
+
 from pyspark.conf import SparkConf
 import argparse
 import os
@@ -19,8 +20,10 @@ from hdfs import *
 client_N = Client("http://127.0.0.1:50070")
 
 from pyspark.sql.types import *
+
 import sample_model
 import AR_model_mapfunc
+import KDE_model_mapfunc
 
 schema = StructType([
     StructField("id",  StringType(), True),
@@ -82,35 +85,39 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     print("args:",args)
     print("{0} ===== Start".format(datetime.now().isoformat()))
     args.batch_size=int(rdd_count*0.90/spark_worker_num/5)
-    # if rdd_count<100000:
-    #     args.epochs=2
-    #     args.batch_size=rdd_count
-    # else:
-    #     args.epochs=1
-    #     args.batch_size=150000
 
-    # print("getNumPartitions:=",dataRDD.getNumPartitions())
-    cluster = TFCluster.run(sc, AR_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    cluster = TFCluster.run(sc, AR_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
     cluster.train(dataRDD, args.epochs)
     cluster.shutdown()
     print("-----------------train over-------------------------------")
+
     args.mode='inference'
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/10)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/5)
     args.epochs=1
     print(args.mode)
-    cluster1 = TFCluster.run(sc, AR_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    cluster1 = TFCluster.run(sc, AR_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster1.inference(dataRDD)
     print(labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).take(100))# .saveAsTextFile(args.output)
     cluster1.shutdown()
     print("-----------------inference over-------------------------------")
-    print("{0} ===== Stop".format(datetime.now().isoformat()))
 
+    cluster = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num)
+    # if args.mode == "train":
+    labelRDD2=cluster.inference(labelRDD, args.epochs)
+    print(labelRDD2.filter(lambda x:not str(x[0]).__eq__('o')).take(100))
+    cluster.shutdown()
+    print("{0} ===== Stop".format(datetime.now().isoformat()))
 
 #启动进程，按每worker个为一组进行进行数据分解
 num=0
 spark_work=4
 list_tmp=[]
+# from operator import itemgetter, attrgetter
+# list_show=sorted(list(cz_FQW),key=itemgetter(1))
+# print(list_show)
+print("----------------开始-------------------------------------")
 for i in list(cz_FQW):
     if num==0:
         list_tmp.append(i)

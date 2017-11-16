@@ -16,7 +16,7 @@ def get_available_gpus_len():
     local_device_protos = _device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU'].__len__()
 
-def map_fun(args, ctx):
+def map_func(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -43,7 +43,7 @@ def map_fun(args, ctx):
         i=0
         for item in batch:
             if(i==0):
-                print(item)
+                # print(item)
                 partitionnum=item[0]
                 y.append(item[1][1])
                 i=i+1
@@ -54,6 +54,31 @@ def map_fun(args, ctx):
         xs=numpy.array(range(ys.__len__()))
         xs=xs.astype(numpy.float32)
         return partitionnum,(xs, ys)
+
+
+    def feed_dict_fence(batch):
+        # Convert from [(images, labels)] to two numpy arrays of the proper type
+        list_xs_1=[]
+        partitionnum=0
+        y = []
+        i=0
+        for item in batch:
+            if(i==0):
+                # print(item)
+                partitionnum=item[0]
+                y.append(item[1][1])
+                list_xs_1.append(item[1][0])
+                i=i+1
+            else:
+                y.append(item[1][1])
+                list_xs_1.append(item[1][0])
+
+        ys = numpy.array(y)
+        ys = ys.astype(numpy.float32)
+        xs=numpy.array(range(ys.__len__()))
+        xs=xs.astype(numpy.float32)
+        return partitionnum,(list_xs_1,xs,ys)
+
 
     if job_name == "ps":
         server.join()
@@ -75,7 +100,7 @@ def map_fun(args, ctx):
         with tf.device(gpu_num):
             if(args.mode=="train"):
                 i=0
-                while not tf_feed.should_stop() and i<5:
+                while not tf_feed.should_stop() and i<10:
                     # if(tf_feed.should_stop()):
                     #     tf_feed.terminate()
                     print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
@@ -102,8 +127,10 @@ def map_fun(args, ctx):
                 tf_feed.terminate()
 
             else:#测试
+                i=0
                 while not tf_feed.should_stop():
-                    num,(batch_xs, batch_ys)= feed_dict(tf_feed.next_batch(batch_size))
+                    print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步fence---------------------------------")
+                    num,(xs_info,batch_xs, batch_ys)= feed_dict_fence(tf_feed.next_batch(batch_size))
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
@@ -122,10 +149,11 @@ def map_fun(args, ctx):
                     evaluation = ar.evaluate(input_fn=evaluation_input_fn, steps=1)
                     _y=list(evaluation['mean'].reshape(-1))
                     y=list(data['values'].reshape(-1))
-                    results =[[e,l,e-l] for e,l in zip(_y,y)]
+                    results =[[num,e[0],e[1],e[0]-e[1],l] for e,l in zip(zip(_y,y),xs_info)]
                     # results =[(ctx.task_index,e) for e in batch_ys]
                     num_lack=batch_size-results.__len__()
                     if num_lack>0:
-                        results.extend([["o","o","o"]]*num_lack)
+                        results.extend([["o","o"]]*num_lack)
                     tf_feed.batch_results(results)
+                    i=i+1
             tf_feed.terminate()

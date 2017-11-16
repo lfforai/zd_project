@@ -1,4 +1,6 @@
 # 导入本地文件放入
+#./spark-submit --py-files ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/sample_model.py  --py-files  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/AR_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4"  ~/IdeaProjects/zd_project/.idea/spark-warehouse/spark-streaming/model_run.py
+
 from pyspark.conf import SparkConf
 import argparse
 import os
@@ -31,7 +33,6 @@ conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 # sc =spark.sparkContext
 # sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
-
 
 #一、#############################################################################
 #文件名分解函数，把原点名分解为原点名字、厂站、原点设备
@@ -110,7 +111,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
             result=[]
             num=0
             for i in iter:
-                if num>start_point and num<length:
+                if num>start_point and num<start_point+length:
                     value=str(i).split(",")
                     result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
                 num=num+1
@@ -126,11 +127,13 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
             filename_list=[filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
+            sum_count=0
             for j in filename_list:
               #每个原点按照比例进行抽样
               rdd_tmp=sc.textFile(j)
               partitions_num=rdd_tmp.getNumPartitions()
               total_count=rdd_tmp.count()
+              # sum_count=sum_count+total_count
               each_max_limit=max_sample_length/partitions_num
               eachpartitions_len=int(total_count/partitions_num*0.9)
               rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
