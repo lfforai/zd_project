@@ -148,9 +148,9 @@ else:
     args.batch_size=1000
 
 # print("getNumPartitions:=",dataRDD.getNumPartitions())
-cluster = TFCluster.run(sc, KDE_model_mapfunc.map_fun, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-# if args.mode == "train":
-cluster.train(dataRDD, args.epochs)
+cluster = TFCluster.run(sc, KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+args.mode ="inference"
+cluster.inference(dataRDD, args.epochs)
 cluster.shutdown()
 print("-----------------train over-------------------------------")
 # # else:

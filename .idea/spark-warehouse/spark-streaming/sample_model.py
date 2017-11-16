@@ -90,12 +90,14 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
       fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
       group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add)\
       .map(lambda x:[str(x[0]).split("|")[0],str(x[0]).split("|")[1],x[1]]).collect()
+      group_name_cz_list=[[e[0],e[1],e[2],\
+                        np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+"F"+str(e[1])+"/"+str(value))['length']/np.power(1024,2) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
       return  group_name_total_list,group_name_cz_list
        #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.30,max_sample_length=50000):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
@@ -124,6 +126,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
         for i in filelist:
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
+            file_length=float(i[3])
             filename_list=[filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F

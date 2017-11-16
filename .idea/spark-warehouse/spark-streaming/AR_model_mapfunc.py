@@ -100,16 +100,15 @@ def map_func(args, ctx):
         with tf.device(gpu_num):
             if(args.mode=="train"):
                 i=0
-                while not tf_feed.should_stop() and i<10:
-                    # if(tf_feed.should_stop()):
-                    #     tf_feed.terminate()
+                while not tf_feed.should_stop() and i<args.steps:
                     print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
                     }
-
+                    if(batch_ys.__len__()<40):
+                       break
                     if marknum==0 or num!=p_num:
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
                         marknum=marknum+1
@@ -139,21 +138,27 @@ def map_func(args, ctx):
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
                         marknum=marknum+1
                         p_num=num
-                    ar = tf.contrib.timeseries.ARRegressor(
-                        periodicities=200, input_window_size=30, output_window_size=10,
-                        num_features=1,
-                        loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
-                    reader_N = NumpyReader(data)
-                    evaluation_input_fn = tf.contrib.timeseries.WholeDatasetInputFn(reader_N)
-                    #keys of evaluation: ['covariance', 'loss', 'mean', 'observed', 'start_tuple', 'times', 'global_step']
-                    evaluation = ar.evaluate(input_fn=evaluation_input_fn, steps=1)
-                    _y=list(evaluation['mean'].reshape(-1))
-                    y=list(data['values'].reshape(-1))
-                    results =[[num,e[0],e[1],e[0]-e[1],l] for e,l in zip(zip(_y,y),xs_info)]
-                    # results =[(ctx.task_index,e) for e in batch_ys]
-                    num_lack=batch_size-results.__len__()
-                    if num_lack>0:
-                        results.extend([["o","o"]]*num_lack)
-                    tf_feed.batch_results(results)
+                    results=[]
+                    len=batch_ys.__len__()
+                    if(len<40):
+                        results.extend([["o","o"]]*len)
+                        tf_feed.batch_results(results)
+                    else:
+                        ar = tf.contrib.timeseries.ARRegressor(
+                            periodicities=200, input_window_size=30, output_window_size=10,
+                            num_features=1,
+                            loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
+                        reader_N = NumpyReader(data)
+                        evaluation_input_fn = tf.contrib.timeseries.WholeDatasetInputFn(reader_N)
+                        #keys of evaluation: ['covariance', 'loss', 'mean', 'observed', 'start_tuple', 'times', 'global_step']
+                        evaluation = ar.evaluate(input_fn=evaluation_input_fn, steps=1)
+                        _y=list(evaluation['mean'].reshape(-1))
+                        y=list(data['values'].reshape(-1))
+                        results =[[num,e[0],e[1],e[0]-e[1],l] for e,l in zip(zip(_y,y),xs_info)]
+                        # results =[(ctx.task_index,e) for e in batch_ys]
+                        num_lack=len-results.__len__()
+                        if num_lack>0:
+                            results.extend([["o","o"]]*num_lack)
+                        tf_feed.batch_results(results)
                     i=i+1
             tf_feed.terminate()
