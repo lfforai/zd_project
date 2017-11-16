@@ -178,6 +178,7 @@ def map_func(args, ctx):
         with tf.device("/cpu:0"):
             if(args.mode=="train"):
                 print("no need train no!")
+                tf_feed.terminate()
             else:#测试
                 print("no need train")
                 while not tf_feed.should_stop():
@@ -185,14 +186,16 @@ def map_func(args, ctx):
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                     len=batch_ys.__len__()
                     #寻找F（x）大于95%或者5%的异常值点
-                    p_up,p_value_up=normal_probability(batch_ys,n=500,p=0.95,gpu_num="0")
-                    print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
+                    with tf.variable_scope("p_up"):
+                     p_up,p_value_up=normal_probability(batch_ys,n=1500,p=0.95,gpu_num="0")
+                     print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
+                    with tf.variable_scope("p_down"):
+                     p_down,p_value_down=normal_probability(batch_ys,n=1500,p=0.05,gpu_num="0")
+                     print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
 
-                    p_down,p_value_down=normal_probability(batch_ys,n=500,p=0.05,gpu_num="0")
-                    print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
-
-                    rezult=filter(lambda x:x[0]>p_value_up or x[0]<p_value_down,list[zip(batch_ys,batch_xs)])
-                    num_lack=len-results.__len__()
+                    rezult=list(filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,list[zip(batch_ys,batch_xs)]))
+                    num_lack=len-result.__len__()
                     if num_lack>0:
-                        results.extend([["o","o"]]*num_lack)
-                    tf_feed.batch_results(results)
+                        result.extend([["o","o"]]*num_lack)
+                    tf_feed.batch_results(result)
+                tf_feed.terminate()

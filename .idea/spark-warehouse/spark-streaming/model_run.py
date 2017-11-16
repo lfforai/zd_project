@@ -46,7 +46,7 @@ parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default
 parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="AR_model")
 parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=4)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
-parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=4)
+parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=6)
 parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=10)
 parser.add_argument("-tb", "--tensorboard", help="launch tensorboard process", action="store_true")
 parser.add_argument("-X", "--mode", help="train|inference", default="train")
@@ -117,6 +117,11 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     print("----------------AR-inference over--------------------------")
 
     print("----------------KDE-inference start------------------------")
+    cluster3 = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    args.mode='train'
+    cluster3.train(labelRDD1, args.epochs)
+    cluster3.shutdown()
+
     args.batch_size=int(labelRDD1.count()*0.90/spark_worker_num/2)
     args.mode='inference'
     print("args.batch_size=========================",args.batch_size)
