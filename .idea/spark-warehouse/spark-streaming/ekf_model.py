@@ -38,7 +38,7 @@ os.environ["spark.executorEnv.LD_LIBRARY_PATH"]="${JAVA_HOME}/jre/lib/amd64/serv
 os.environ["spark.executorEnv.CLASSPATH"]="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}"
 os.environ["spark.executorEnv.HADOOP_HDFS_HOME"]="/tool_lf/hadoop/hadoop-2.7.4"
 
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://titianx:7077")
 sc=SparkContext(conf=conf)
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 # sc =spark.sparkContext

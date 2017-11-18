@@ -16,7 +16,7 @@ def get_available_gpus_len():
     local_device_protos = _device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU'].__len__()
 
-def map_func(args, ctx):
+def map_func_AR(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -120,7 +120,7 @@ def map_func(args, ctx):
                         loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                     reader = NumpyReader(data)
                     train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=200, window_size=40)
-                    ar.train(input_fn=train_input_fn, steps=10)
+                    ar.train(input_fn=train_input_fn, steps=100)
                     i=i+1
                     # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()

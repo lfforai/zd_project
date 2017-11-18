@@ -25,9 +25,9 @@ schema = StructType([
 )
 
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
-os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
+os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/envs/python3.6_lf/"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://titianx:7077")
 
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
@@ -97,7 +97,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=40000):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np

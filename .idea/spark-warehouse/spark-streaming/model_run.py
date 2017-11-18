@@ -1,5 +1,5 @@
 # 导入本地文件放入
-#/tool_lf/spark/spark-2.2.0-bin-hadoop2.7/sbin/spark-submit --py-files sample_model.py,AR_model_mapfunc.py,KDE_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4" model_run.py
+#/tool_lf/spark/spark-2.2.0-bin-hadoop2.7/bin/spark-submit --py-files sample_model.py,AR_model_mapfunc.py,KDE_model_mapfunc.py  --conf spark.executorEnv.LD_LIBRARY_PATH="${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64"  --conf spark.executorEnv.CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}" --conf spark.executorEnv.HADOOP_HDFS_HOME="/tool_lf/hadoop/hadoop-2.7.4" model_run.py
 
 # cd /
 from pyspark.conf import SparkConf
@@ -32,9 +32,9 @@ schema = StructType([
 )
 
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
-os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
+os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/envs/python3.6_lf/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://titianx:7077")
 
 #一、参数设置
 parser = argparse.ArgumentParser()
@@ -44,10 +44,10 @@ parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default
 # parser.add_argument("-i", "--images", help="HDFS path to MNIST images in parallelized format")
 # parser.add_argument("-l", "--labels", help="HDFS path to MNIST labels in parallelized format")
 parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="AR_model")
-parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=2)
+parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=4)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
-parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=1)
-parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=10)
+parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=10)
+parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=5)
 parser.add_argument("-tb", "--tensorboard", help="launch tensorboard process", action="store_true")
 parser.add_argument("-X", "--mode", help="train|inference", default="train")
 parser.add_argument("-c", "--rdma", help="use rdma connection", default=False)
@@ -77,31 +77,32 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     num_executors = spark_worker_num
     num_ps = 0
 
-    print("----------------AR-train start-------------------------------")
-    #删除存储模型参数用目录
-    if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
-        client_N.delete("/user/root/model/",recursive=True)
-
-    print("args:",args)
-    args.mode='train'
-    print("{0} ===== Start".format(datetime.now().isoformat()))
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/10)
-
-    cluster = TFCluster.run(sc, AR_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    # if args.mode == "train":
-    cluster.train(dataRDD, args.epochs)
-    cluster.shutdown()
+    # print("----------------AR-train start-------------------------------")
+    # #删除存储模型参数用目录
+    # if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
+    #     client_N.delete("/user/root/model/",recursive=True)
+    #
+    # print("args:",args)
+    # args.mode='train'
+    # print("{0} ===== Start".format(datetime.now().isoformat()))
+    # args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+    #
+    # cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    # # if args.mode == "train":
+    # cluster_AR_train.train(dataRDD, args.epochs)
+    # cluster_AR_train.shutdown()
     print("----------------AR-train over-------------------------------")
 
     #依次对每个站点的每个原地带入模型进行结果测算
     print("----------------AR-inference start--------------------------")
     #对所有测点进行一次遍历
     args.mode='inference'
+    print("args.batch_size=========================",args.batch_size)
     args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
     args.epochs=1
     print(args.mode)
-    cluster1 = TFCluster.run(sc, AR_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    labelRDD = cluster1.inference(dataRDD).persist()
+    cluster_AR_inference = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    labelRDD = cluster_AR_inference.inference(dataRDD).persist()
     labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).persist()
     def func_m(partitionIndex,iter):
         num=0
@@ -114,24 +115,24 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     # print("labelRDD======luofeng:",labelRDD1.count())
     # .saveAsTextFile(args.output)
-    cluster1.shutdown()
+    cluster_AR_inference.shutdown()
     print("----------------AR-inference over--------------------------")
 
     print("----------------KDE-inference start------------------------")
-    # cluster3 = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    # args.mode='train'
-    # args.epochs=1
-    # cluster3.train(labelRDD1, args.epochs)
-    # cluster3.shutdown()
+    cluster3 = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    args.mode='train'
+    args.epochs=1
+    cluster3.train(labelRDD1, args.epochs)
+    cluster3.shutdown()
 
     args.batch_size=int(labelRDD1.count()/spark_worker_num/2)
-    args.mode='train'
+    args.mode='inference'
     print("args.batch_size=========================",args.batch_size)
     print("partition=========================",labelRDD1.getNumPartitions())
-    cluster2 = TFCluster.run(sc,KDE_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    cluster_KDE = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
     # labelRDD2=
-    cluster2.train(labelRDD1, args.epochs)
+    cluster_KDE.inference(labelRDD1, args.epochs)
     # labelRDD3=labelRDD2.filter(lambda x:not str(x[0]).__eq__('o')).persist()
     # print("labelRDD3:======",labelRDD3.take(100))
     # def func_m(partitionIndex,iter):
@@ -143,13 +144,13 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     #         num=num+1
     #     return rezult
     #print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
-    cluster2.shutdown()
+    cluster_KDE.shutdown()
     print("----------------KDE-inference over--------------------------")
     print("{0} ===== Stop".format(datetime.now().isoformat()))
 
 #启动进程，按每worker个为一组进行进行数据分解
 num=0
-spark_work=2
+spark_work=4
 list_tmp=[]
 
 #剔除厂站-原点大小小于500M的点，补足spark_work的点数量，用test名字代替（对齐运算用）

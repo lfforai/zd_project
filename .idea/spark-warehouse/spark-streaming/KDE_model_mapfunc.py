@@ -112,7 +112,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
         sess.close()
     return p_now_np,results
 
-def map_func(args, ctx):
+def map_func_KDE(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -168,42 +168,44 @@ def map_func(args, ctx):
         # #按gpu个数分发
         with tf.device("/cpu:0"):
             if(args.mode=="train"):
-                print("train")
+                print("train KDE")
+                # print("train")
+                # # while not tf_feed.should_stop():
+                #     #num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
+                # i=0
                 # while not tf_feed.should_stop():
-                    #num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-                i=0
-                while not tf_feed.should_stop():
-                    print("------------------第"+str(i+1)+"次 KDE—batch-----------------------")
-                    result_list=[]
-                    # Add ops to save and restore all the variables.
-                    num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
-                    len=batch_ys.__len__()
-                    #寻找F（x）大于95%或者5%的异常值点
-                    if len>200:
-                        with tf.variable_scope("D"+str(i)) as scope:
-                            p_up,p_value_up=normal_probability(batch_ys,n=1500,p=0.95,gpu_num="0")
-                            print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
-                            scope.reuse_variables()
-                            p_down,p_value_down=normal_probability(batch_ys,n=1500,p=0.05,gpu_num="0")
-                            print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
-
-                            result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))
-                            print("result_list[0]:==",result_list[0])
-                            f=open('/lf/eer/eer_'+str(num)+'.txt','a')
-                            for j in result_list:f.write(str(j)+'\n')
-                            f.write('\n')
-                            f.close()
-                    i=i+1
+                #     print("------------------第"+str(i+1)+"次 KDE—batch-----------------------")
+                #     result_list=[]
+                #     # Add ops to save and restore all the variables.
+                #     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
+                #     len=batch_ys.__len__()
+                #     #寻找F（x）大于95%或者5%的异常值点
+                #     if len>200:
+                #         with tf.variable_scope("D"+str(i)) as scope:
+                #             p_up,p_value_up=normal_probability(batch_ys,n=1500,p=0.95,gpu_num="0")
+                #             print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
+                #             scope.reuse_variables()
+                #             p_down,p_value_down=normal_probability(batch_ys,n=1500,p=0.05,gpu_num="0")
+                #             print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
+                #
+                #             result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))
+                #             print("result_list[0]:==",result_list[0])
+                #             f=open('/lf/eer/eer_'+str(num)+'.txt','a')
+                #             for j in result_list:f.write(str(j)+'\n')
+                #             f.write('\n')
+                #             f.close()
+                #     i=i+1
                 tf_feed.terminate()
             else:#测试
                 print("no need train")
                 i=0
                 while not tf_feed.should_stop():
-                    print("------------------第"+str(i+1)+"次 KDE—batch-----------------------")
+                    print("------------------第"+str(i+1)+"次 KDE—batch inference-----------------------")
                     result_list=[]
                     # Add ops to save and restore all the variables.
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                     len=batch_ys.__len__()
+                    print("len:======",len)
                     #寻找F（x）大于95%或者5%的异常值点
                     if len>200:
                         with tf.variable_scope("D"+str(i)) as scope:
@@ -229,5 +231,5 @@ def map_func(args, ctx):
                         i=i+1
                         result_list.extend([["o","o"]]*len)
                         tf_feed.batch_results(result_list)
-                        print("this batch_size<2000,put in empty!")
-                tf_feed.terminate()
+                        print("this batch_size<200,put in empty!")
+            tf_feed.terminate()

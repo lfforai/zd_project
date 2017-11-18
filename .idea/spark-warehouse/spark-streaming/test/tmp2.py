@@ -6,6 +6,7 @@ import sys
 import tensorflow as tf
 import threading
 import time
+import struct
 from datetime import datetime
 
 from tensorflowonspark import TFCluster
@@ -54,6 +55,8 @@ for i in zip(x,y):
      print(i)
 rezult=list(filter(lambda x:x[0]<2,zip(x,y)))
 print(rezult)
+print(z[2:])
+print(struct.unpack('>I', z[:2])[0])
 # for x in w:
 #     print(x[1][0])
 # print([e[1] for e in zip(x,z)])

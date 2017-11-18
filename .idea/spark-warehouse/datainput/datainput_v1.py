@@ -25,7 +25,7 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://192.168.1.70:7077")
+conf=SparkConf().setMaster("spark://titianx:7077")
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
@@ -110,7 +110,7 @@ hdfs_dir="/zd_data11.14/"
 file_hdfsname="G_CFMY_1_002FW001.txt"
 
 #整个文件夹上传
-local_dir="/lf/2017.11.14/total/"
+local_dir="/lf/data/"
 
 hdfs_dir="/zd_data11.14/"
 
