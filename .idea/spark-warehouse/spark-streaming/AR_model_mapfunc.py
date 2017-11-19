@@ -111,6 +111,7 @@ def map_func_AR(args, ctx):
                        break
                     if marknum==0 or num!=p_num:
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
+                        logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
                         marknum=marknum+1
                         p_num=num
                         print("logdir================:",logdir)
@@ -136,6 +137,7 @@ def map_func_AR(args, ctx):
                     }
                     if marknum==0 or num!=p_num:
                         logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
+                        logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
                         marknum=marknum+1
                         p_num=num
                     results=[]

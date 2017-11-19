@@ -157,10 +157,10 @@ def map_func_KDE(args, ctx):
         #print("tensorflow model path: {0}".format(logdir))
         tf_feed = TFNode.DataFeed(ctx.mgr, args.mode == "train")
 
-        if(get_available_gpus_len()==15):
-            gpu_num="/cpu:0"
-        else:
-            gpu_num="/gpu:{0}".format(int(ctx.task_index%get_available_gpus_len()))
+        # if(get_available_gpus_len()==15):
+        #     gpu_num="/cpu:0"
+        # else:
+        #     gpu_num="/gpu:{0}".format(int(ctx.task_index%get_available_gpus_len()))
         print("gpu:=====================",gpu_num)
         logdir=''
         marknum=0

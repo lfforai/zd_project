@@ -47,7 +47,7 @@ parser.add_argument("-m", "--model", help="HDFS path to save/load model during t
 parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=4)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
 parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=10)
-parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=5)
+parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=20)
 parser.add_argument("-tb", "--tensorboard", help="launch tensorboard process", action="store_true")
 parser.add_argument("-X", "--mode", help="train|inference", default="train")
 parser.add_argument("-c", "--rdma", help="use rdma connection", default=False)
@@ -85,7 +85,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     print("args:",args)
     args.mode='train'
     print("{0} ===== Start".format(datetime.now().isoformat()))
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/8)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/15)
 
     cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
@@ -99,7 +99,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     args.mode='inference'
 
     print("rdd count===============================",dataRDD.count())
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/5)
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     print(args.mode)
@@ -130,7 +130,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     # print("----------------KDE-run over------------------------")
 
     print("----------------KDE-inference start------------------------")
-    args.batch_size=int(labelRDD1.count()/spark_worker_num/5)
+    args.batch_size=int(labelRDD1.count()/spark_worker_num/2)
     args.mode='inference'
     print("args.batch_size=========================",args.batch_size)
     print("partition=========================",labelRDD1.getNumPartitions())

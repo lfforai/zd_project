@@ -97,7 +97,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=40000,hdfs_addr="hdfs://sjfx1:9000"):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.30,max_sample_length=80000,hdfs_addr="hdfs://sjfx1:9000"):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
