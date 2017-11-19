@@ -71,34 +71,36 @@ FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 sc.stop()
 
-def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
+def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     global client_N
     #['G_LYXGF', 'Q', 'G_LYXGF_1_315NQ001.S.txt|G_LYXGF_1_315NQ002.S.txt|G_LYXGF_1_316NQ001.S.txt|G_LYXGF_1_316NQ002.S.txt|G_LYXGF_1_317NQ001.S.txt|G_LYXGF_1_317NQ002.S.txt'
     num_executors = spark_worker_num
     num_ps = 0
 
-    # print("----------------AR-train start-------------------------------")
-    # #删除存储模型参数用目录
-    # if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
-    #     client_N.delete("/user/root/model/",recursive=True)
-    #
-    # print("args:",args)
-    # args.mode='train'
-    # print("{0} ===== Start".format(datetime.now().isoformat()))
-    # args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
-    #
-    # cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    # # if args.mode == "train":
-    # cluster_AR_train.train(dataRDD, args.epochs)
-    # cluster_AR_train.shutdown()
+    print("----------------AR-train start-------------------------------")
+    #删除存储模型参数用目录
+    if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
+        client_N.delete("/user/root/model/",recursive=True)
+
+    print("args:",args)
+    args.mode='train'
+    print("{0} ===== Start".format(datetime.now().isoformat()))
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+
+    cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    # if args.mode == "train":
+    cluster_AR_train.train(dataRDD, args.epochs)
+    cluster_AR_train.shutdown()
     print("----------------AR-train over-------------------------------")
 
     #依次对每个站点的每个原地带入模型进行结果测算
     print("----------------AR-inference start--------------------------")
     #对所有测点进行一次遍历
     args.mode='inference'
-    print("args.batch_size=========================",args.batch_size)
+
+    print("rdd count===============================",dataRDD.count())
     args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+    print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     print(args.mode)
     cluster_AR_inference = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
@@ -118,23 +120,26 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     cluster_AR_inference.shutdown()
     print("----------------AR-inference over--------------------------")
 
-    print("----------------KDE-inference start------------------------")
-    cluster3 = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    args.mode='train'
-    args.epochs=1
-    cluster3.train(labelRDD1, args.epochs)
-    cluster3.shutdown()
+    # print("----------------KDE-train start------------------------")
+    # print("labelRDD1 count===============================",labelRDD1.count())
+    # args.mode='train'
+    # cluster3 = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    # args.epochs=1
+    # cluster3.train(labelRDD1, args.epochs)
+    # cluster3.shutdown()
+    # print("----------------KDE-run over------------------------")
 
-    args.batch_size=int(labelRDD1.count()/spark_worker_num/2)
+    print("----------------KDE-inference start------------------------")
+    args.batch_size=int(labelRDD1.count()/spark_worker_num/5)
     args.mode='inference'
     print("args.batch_size=========================",args.batch_size)
     print("partition=========================",labelRDD1.getNumPartitions())
     cluster_KDE = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
     # labelRDD2=
-    cluster_KDE.inference(labelRDD1, args.epochs)
-    # labelRDD3=labelRDD2.filter(lambda x:not str(x[0]).__eq__('o')).persist()
-    # print("labelRDD3:======",labelRDD3.take(100))
+    labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs).persist()
+    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://127.0.0.1:9000/rezult/"+str(name)+".txt")
+    # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
     #     rezult=[]
@@ -143,7 +148,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count):
     #             rezult.append(["part:="+str(partitionIndex),i])
     #         num=num+1
     #     return rezult
-    #print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
+    # print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
     cluster_KDE.shutdown()
     print("----------------KDE-inference over--------------------------")
     print("{0} ===== Stop".format(datetime.now().isoformat()))
@@ -184,7 +189,7 @@ for i in list(cz_FQW):
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             rdd_count=rdd.count()
-            AR_model_start(sc,args,spark_work,rdd,rdd_count)
+            AR_model_start(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
             sc.stop()
             print("-------------next AR_model_start--------------------")
             list_tmp=[]

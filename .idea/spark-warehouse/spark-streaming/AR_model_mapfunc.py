@@ -119,8 +119,8 @@ def map_func_AR(args, ctx):
                         num_features=1,
                         loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                     reader = NumpyReader(data)
-                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=200, window_size=40)
-                    ar.train(input_fn=train_input_fn, steps=100)
+                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=500, window_size=40)
+                    ar.train(input_fn=train_input_fn, steps=500)
                     i=i+1
                     # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()
@@ -143,6 +143,7 @@ def map_func_AR(args, ctx):
                     if(len<40):
                         results.extend([["o","o"]]*len)
                         tf_feed.batch_results(results)
+                        print("40<")
                     else:
                         ar = tf.contrib.timeseries.ARRegressor(
                             periodicities=200, input_window_size=30, output_window_size=10,
