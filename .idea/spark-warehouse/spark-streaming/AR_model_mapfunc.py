@@ -120,7 +120,7 @@ def map_func_AR(args, ctx):
                         loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                     reader = NumpyReader(data)
                     train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=500, window_size=40)
-                    ar.train(input_fn=train_input_fn, steps=500)
+                    ar.train(input_fn=train_input_fn, steps=50)
                     i=i+1
                     # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()

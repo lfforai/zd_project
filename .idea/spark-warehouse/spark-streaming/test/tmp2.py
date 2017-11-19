@@ -25,8 +25,9 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
-
+conf=SparkConf().setMaster("spark://sjfx4:7077")
+sc=SparkContext(conf=conf)
+print(sc.textFile("hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").take(100))
 # # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 # sc =spark.sparkContext

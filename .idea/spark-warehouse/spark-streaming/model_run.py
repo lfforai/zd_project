@@ -22,7 +22,7 @@ from pyspark import SparkContext  # pyspark.SparkContext dd
 from pyspark.conf import SparkConf #conf
 
 from hdfs import *
-client_N = Client("http://127.0.0.1:50070")
+client_N = Client("http://sjfx1:50070")
 from pyspark.sql.types import *
 
 schema = StructType([
@@ -32,9 +32,9 @@ schema = StructType([
 )
 
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
-os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/envs/python3.6_lf/bin/python"
+os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://titianx:7077")
+conf=SparkConf().setMaster("spark://sjfx4:7077")
 
 #一、参数设置
 parser = argparse.ArgumentParser()
@@ -67,7 +67,7 @@ def fuc(iterator):
                     index2=str(a).find("_",2)
                     value_list.append([a[0:index2],a[j+2],a[0:j+1],str(a)])
     return value_list
-FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070", \
+FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 sc.stop()
 
@@ -85,7 +85,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     print("args:",args)
     args.mode='train'
     print("{0} ===== Start".format(datetime.now().isoformat()))
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/8)
 
     cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
@@ -138,7 +138,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     # if args.mode == "train":
     # labelRDD2=
     labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs).persist()
-    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://127.0.0.1:9000/rezult/"+str(name)+".txt")
+    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+str(name)+".txt")
     # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
@@ -175,6 +175,9 @@ cz_FQW=re+cz_FQW
 # print(cz_FQW)
 
 print("----------------开始-------------------------------------")
+print(cz_FQW)
+print("需要处理的长度文件总长度=：",cz_FQW.__len__())
+
 # times=0
 for i in list(cz_FQW):
     # if times==1:
@@ -185,7 +188,7 @@ for i in list(cz_FQW):
     else:
         if num%spark_work==0:
             sc=SparkContext(conf=conf)
-            ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+            ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             rdd_count=rdd.count()
@@ -199,5 +202,16 @@ for i in list(cz_FQW):
         else:
             list_tmp.append(i)
             num=num+1
-print("over")
+
+print("last done：")#处理最后一组
+sc=SparkContext(conf=conf)
+ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+rdd=sc.union(ex)
+print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+rdd_count=rdd.count()
+AR_model_start(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+sc.stop()
+print("all over")
+
+
 
