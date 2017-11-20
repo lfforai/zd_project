@@ -47,7 +47,7 @@ parser.add_argument("-m", "--model", help="HDFS path to save/load model during t
 parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=4)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
 parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=10)
-parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=2)
+parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=20)
 parser.add_argument("-tb", "--tensorboard", help="launch tensorboard process", action="store_true")
 parser.add_argument("-X", "--mode", help="train|inference", default="train")
 parser.add_argument("-c", "--rdma", help="use rdma connection", default=False)
@@ -70,6 +70,11 @@ def fuc(iterator):
 FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 sc.stop()
+
+
+print("----------------开始-------------------------------------")
+#准备inference用数据集
+cz_FOW_inference=list.copy(cz_FQW)
 
 def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     global client_N
@@ -169,7 +174,7 @@ def AR_model_start_train(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     print("args:",args)
     args.mode='train'
     print("{0} ===== Start".format(datetime.now().isoformat()))
-    args.batch_size=int(rdd_count*0.90/spark_worker_num/2)
+    args.batch_size=int(rdd_count*0.90/spark_worker_num/10)
 
     cluster_AR_train = TFCluster.run(sc, AR_model_mapfunc.map_func_AR, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
@@ -234,8 +239,6 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     print("{0} ===== Stop".format(datetime.now().isoformat()))
 
 
-
-
 #启动进程，按每worker个为一组进行进行数据分解
 num=0
 spark_work=4
@@ -255,13 +258,10 @@ for value in new_cz_FQW:
     re.append([value[0]+"_"+str(j)+"$",value[1],value[2],value[3]])
     j=j+1
 cz_FQW=re+cz_FQW
-# print(cz_FQW)
 
-print("----------------开始-------------------------------------")
-print(cz_FQW)
+
 print("需要处理的长度文件总长度=：",cz_FQW.__len__())
-
-# times=0
+# 第一轮是进行模型训练，每个tensorflow custer训练一个模型
 for i in list(cz_FQW):
     # if times==1:
     #     break
@@ -275,7 +275,7 @@ for i in list(cz_FQW):
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             rdd_count=rdd.count()
-            AR_model_start(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+            AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
             sc.stop()
             print("-------------next AR_model_start--------------------")
             list_tmp=[]
@@ -292,9 +292,46 @@ ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
 rdd=sc.union(ex)
 print("rdd.getNumPartitions:=",rdd.getNumPartitions())
 rdd_count=rdd.count()
-AR_model_start(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
 sc.stop()
-print("all over")
+print("train all over")
+
+# 用模型参数进行数据测试
+cz_FOW_inference_ex=data_to_inference(addrs="sjfx1",port="50070",cz_FQW=cz_FOW_inference,network_num=4)
+for i in list(cz_FOW_inference_ex):
+    # if times==1:
+    #     break
+    if num==0:
+        list_tmp.append(i)
+        num=num+1
+    else:
+        if num%spark_work==0:
+            sc=SparkContext(conf=conf)
+            ex=sample_model.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
+            rdd=sc.union(ex)
+            print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+            rdd_count=rdd.count()
+            AR_model_start_inference(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+            sc.stop()
+            print("-------------next--------------------")
+            list_tmp=[]
+            num=num+1
+            list_tmp.append(i)
+            # times=1
+        else:
+            list_tmp.append(i)
+            num=num+1
+
+print("last done：")#处理最后一组
+sc=SparkContext(conf=conf)
+ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+rdd=sc.union(ex)
+print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+rdd_count=rdd.count()
+AR_model_start_inference(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+sc.stop()
+print("train all over")
+
 
 
 

@@ -97,7 +97,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.30,max_sample_length=80000,hdfs_addr="hdfs://sjfx1:9000"):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=80000,hdfs_addr="hdfs://sjfx1:9000"):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
@@ -146,6 +146,52 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
     else:
        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
     return  all_rdd_list
+
+#厂站-QSW _数据集训练
+def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
+
+    yd_num=list(filelist).__len__()
+    print("本次处理点个数：=",yd_num)
+    all_rdd_list=[]#所有点的list集合
+    if(yd_num==work_num):#需要拟合的点数量正好等于work数量
+        for i in filelist:
+            cz_name=i[0]#厂站名字
+            eq_type=i[1]#原点种类 F功率 Q电量 S风速
+            file_length=float(i[3])#文件长度
+            filename_list=i[2]#文件绝对名字
+            # print(filename_list)
+            rdd_tmp=sc.textFile(j)
+            rdd_tmp=rdd_tmp.map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+            all_rdd_list.append(rdd_tmp.repartition(1))
+    else:
+        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
+    return  all_rdd_list
+
+#inference 准备数据集
+def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
+    from hdfs.client import Client #hdfs和本地文件的交互
+    import pyhdfs as pd #判断文件是否存在
+    import numpy as  np
+
+    fs_pyhdfs = pd.HdfsClient(addrs,port)
+    fs_hdfs = Client("http://"+addrs+":"+port)
+
+    #全部样本 ['G_CFMY', 'Q', 'G_CFMY_1_001', 'G_CFMY_1_001FQ001.txt']
+    inference_file_list=[]
+    for i in list(cz_FQW):
+        inference_file_list.extend([[i[0],i[1],e,fs_hdfs.status("/zd_data11.14/"+"F"+str(i[1])+"/"+str(e))['length']/np.power(1024,2)] for e in str(i[2]).split("|")])
+    # print("处理前：",inference_file_list.__len__())
+    # print(inference_file_list)
+    #按network_num对齐文件数
+    num=0
+    yu_num=inference_file_list.__len__()%network_num
+    # print("余数：=",yu_num)
+    # print([inference_file_list[0]]*(network_num-inference_file_list.__len__()))
+    inference_file_list.extend([inference_file_list[0]]*(network_num-yu_num))
+    # print("处理后：",inference_file_list.__len__())
+    from operator import itemgetter, attrgetter
+    return sorted(inference_file_list,key=itemgetter(3))
+    #['G_LYXGF', 'G_LYXGF_1_116NW001.1.txt', 0.41437244415283203]
 
 #二、############################################################################
 from dateutil import parser

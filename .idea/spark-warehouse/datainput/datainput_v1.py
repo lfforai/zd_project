@@ -25,7 +25,7 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://titianx:7077")
+conf=SparkConf().setMaster("spark://sjfx4:7077")
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
@@ -97,7 +97,7 @@ def delete_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",recurs
 
 #×××××××××××××××××××××××××××××文件目录××××××××××××××××××××××××××××××
 #文件或者目录删除
-deletefilename="/zd_data11.14/"
+deletefilename="/user/root/model"
 
 #目录上传
 local_to_hdfs_dirnames="a" #文件夹上传
@@ -110,19 +110,19 @@ hdfs_dir="/zd_data11.14/"
 file_hdfsname="G_CFMY_1_002FW001.txt"
 
 #整个文件夹上传
-local_dir="/lf/data/"
+local_dir="/rezult/"
 
 hdfs_dir="/zd_data11.14/"
 
 ################################执行命令###############################
 #删除文件
-if False:
-   delete_hdfs(hdfs_path=deletefilename,addrs="127.0.0.1",port="50070")
+if True:
+   delete_hdfs(hdfs_path=deletefilename,addrs="sjfx1",port="50070")
 
 if False:
 #单个本地文件上传
    local_to_hdfs(hdfs_path=hdfs_dir,addrs="127.0.0.1",port="50070",local_filename=local_dir+local_to_hdfs_filename,file_hdfsname=file_hdfsname)
 
-if True:
+if False:
 #整个本地文件上传
    local_dir_to_hdfs(hdfs_path=hdfs_dir,addrs="127.0.0.1",port="50070",local_filedir=local_dir)
