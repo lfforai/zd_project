@@ -28,43 +28,9 @@ os.environ["HADOOP_USER_NAME"] = "root"
 conf=SparkConf().setMaster("spark://sjfx4:7077")
 sc=SparkContext(conf=conf)
 print(sc.textFile("hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").take(100))
-# # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
-# spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
-# sc =spark.sparkContext
-# sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
-#
-# def map_fnc(iter):
-#     rezult=[]
-#     num=0
-#     for i in iter:
-#         num=num+1
-#     rezult.append(num)
-#     return rezult
-#
-# rdd=sc.parallelize(range(100000000))
-# print(rdd.getNumPartitions())
-# print(rdd.mapPartitions(map_fnc).collect())
-# print(sc.parallelize(range(100)).repartition(1).collect())
-#       # .mapPartitions(map_fnc).repartition(1).collect())
-
-x=[1,2,3]
-y=[[2,1],[3,4],[5,6]]
-z=[4,5,6]
-w=zip(x,y)
-
-for i in zip(x,y):
-     print(i)
-rezult=list(filter(lambda x:x[0]<2,zip(x,y)))
-print(rezult)
-print(z[2:])
-print(struct.unpack('>I', z[:2])[0])
-# for x in w:
-#     print(x[1][0])
-# print([e[1] for e in zip(x,z)])
-# y=np.array([16,36,46,56,56,56,65])
-# pi=3.1415926
-# x=54
-# h=1
-# print(np.mean(np.exp(-np.power(x-y,2)/(np.power(h,2)*2.0))/(np.power(pi*2.0,0.5)*h)))
-# #tf.reduce_sum(tf.data.Dataset.from_tensor_slices(tf.convert_to_tensor(np.linspace(1,1,n))))
-# print(np.linspace(1,3,3))
+import os
+status = os.system('/tool_lf/spark/spark-2.2.0-bin-hadoop2.7/bin/spark-submit'+
+                   " --py-files sample_model.py,AR_model_mapfunc.py,KDE_model_mapfunc.py"+
+                   " --conf spark.executorEnv.LD_LIBRARY_PATH='${JAVA_HOME}/jre/lib/amd64/server:/usr/local/cuda-8.0/lib64'"+
+                   " --conf spark.executorEnv.CLASSPATH='$($HADOOP_HOME/bin/hadoop classpath --glob):${CLASSPATH}'"+
+                                                                                                                                                "--conf spark.executorEnv.HADOOP_HDFS_HOME='/tool_lf/hadoop/hadoop-2.7.4'"+"model_run_AR.py")

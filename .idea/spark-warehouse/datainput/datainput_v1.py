@@ -97,8 +97,9 @@ def delete_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",recurs
 
 #×××××××××××××××××××××××××××××文件目录××××××××××××××××××××××××××××××
 #文件或者目录删除
-deletefilename="/user/root/model"
-
+deletefilename="/rezult"
+    #"/user/root/model"
+    #"/rezult"
 #目录上传
 local_to_hdfs_dirnames="a" #文件夹上传
 

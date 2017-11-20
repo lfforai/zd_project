@@ -131,6 +131,7 @@ def map_func_AR(args, ctx):
                 while not tf_feed.should_stop():
                     print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步fence---------------------------------")
                     num,(xs_info,batch_xs, batch_ys)= feed_dict_fence(tf_feed.next_batch(batch_size))
+                    print("bacth_ys length:=",batch_ys.__len__())
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,

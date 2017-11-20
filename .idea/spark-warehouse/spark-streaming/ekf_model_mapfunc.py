@@ -15,7 +15,7 @@ def get_available_gpus_len():
     return [x.name for x in local_device_protos if x.device_type == 'GPU'].__len__()
 
 
-def map_fun(args, ctx):
+def map_func_ekf(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -42,16 +42,41 @@ def map_fun(args, ctx):
         i=0
         for item in batch:
             if(i==0):
+                # print(item)
                 partitionnum=item[0]
-                y.append(item[1])
+                y.append(item[1][1])
                 i=i+1
             else:
-                y.append(item[1])
+                y.append(item[1][1])
         ys = numpy.array(y)
         ys = ys.astype(numpy.float32)
         xs=numpy.array(range(ys.__len__()))
         xs=xs.astype(numpy.float32)
         return partitionnum,(xs, ys)
+
+
+    def feed_dict_fence(batch):
+        # Convert from [(images, labels)] to two numpy arrays of the proper type
+        list_xs_1=[]
+        partitionnum=0
+        y = []
+        i=0
+        for item in batch:
+            if(i==0):
+                # print(item)
+                partitionnum=item[0]
+                y.append(item[1][1])
+                list_xs_1.append(item[1][0])
+                i=i+1
+            else:
+                y.append(item[1][1])
+                list_xs_1.append(item[1][0])
+
+        ys = numpy.array(y)
+        ys = ys.astype(numpy.float32)
+        xs=numpy.array(range(ys.__len__()))
+        xs=xs.astype(numpy.float32)
+        return partitionnum,(list_xs_1,xs,ys)
 
     if job_name == "ps":
         server.join()
@@ -92,6 +117,7 @@ def map_fun(args, ctx):
                         num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                         if marknum==0 or not str(num).__eq__(p_num):
                             logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                            logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
                             marknum=marknum+1
                             p_num=num
                             print("logdir================:",logdir)
@@ -139,7 +165,7 @@ def map_fun(args, ctx):
                             sess.run(init_op)
                             sess.run(local_init_op)
                             print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
-                            for n in range(int(500)):
+                            for n in range(int(100)):
                                 # sess.run(tf.initialize_all_variables())
                                 sess.run(train_op,feed_dict={y:batch_ys})
                             save_path = saver.save(sess, logdir)
@@ -218,7 +244,7 @@ def map_fun(args, ctx):
                             print("Model restored.")
                             print("before H:=",sess.run(H))
                             print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
-                            for n in range(int(500)):
+                            for n in range(int(100)):
                                 # sess.run(tf.initialize_all_variables())
                                 sess.run(train_op,feed_dict={y:batch_ys})
                             save_path = saver.save(sess, logdir)
@@ -246,7 +272,7 @@ def map_fun(args, ctx):
                     p_t_t_1=tf.get_variable(name='p_t_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
                     p_t_1=tf.get_variable(name='p_t_1',dtype=tf.float32,shape=[],initializer=tf.zeros_initializer,trainable=False)
 
-                    num,(batch_xs, batch_ys)= feed_dict(tf_feed.next_batch(batch_size))
+                    num,(xs_info,batch_xs,batch_ys)= feed_dict_fence(tf_feed.next_batch(batch_size))
                     list_length=batch_ys.__len__()
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
@@ -255,6 +281,7 @@ def map_fun(args, ctx):
 
                     if marknum==0 or not str(num).__eq__(p_num):
                        logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                       logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
                        marknum=marknum+1
                        p_num=num
                        print("logdir================:",logdir)
@@ -290,7 +317,8 @@ def map_fun(args, ctx):
                                 #预测的y_st
                                 sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
                                 rep=sess.run(Z*a_t+d)
-                                result.append((batch_ys[i],rep,batch_ys[i]-rep))
+                                result.append([batch_ys[i],rep,batch_ys[i]-rep])
+                        results =[[num,e[0],e[1],e[2],l] for e,l in zip(result,xs_info)]
                         num_lack=batch_size-result.__len__()
                         if num_lack>0:
                             result.extend([["o","o","o"]]*num_lack)

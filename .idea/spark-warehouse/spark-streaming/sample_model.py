@@ -97,7 +97,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=80000,hdfs_addr="hdfs://sjfx1:9000"):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000"):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
@@ -150,6 +150,15 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
 #厂站-QSW _数据集训练
 def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
 
+    def map_func(iter):
+        num=0
+        result=[]
+        for i in iter:
+            value=str(i).split(",")
+            result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
+            num=num+1
+        return result
+
     yd_num=list(filelist).__len__()
     print("本次处理点个数：=",yd_num)
     all_rdd_list=[]#所有点的list集合
@@ -160,8 +169,8 @@ def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdf
             file_length=float(i[3])#文件长度
             filename_list=i[2]#文件绝对名字
             # print(filename_list)
-            rdd_tmp=sc.textFile(j)
-            rdd_tmp=rdd_tmp.map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+            rdd_tmp=sc.textFile(hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(filename_list))
+            rdd_tmp=rdd_tmp.mapPartitions(map_func).map(lambda x:[cz_name+"|"+eq_type,x]).sample(False, 0.1, 81)#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
             all_rdd_list.append(rdd_tmp.repartition(1))
     else:
         print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
