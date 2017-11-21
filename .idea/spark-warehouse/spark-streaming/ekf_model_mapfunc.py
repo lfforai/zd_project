@@ -116,8 +116,9 @@ def map_func_ekf(args, ctx):
                         print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
                         num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                         if marknum==0 or not str(num).__eq__(p_num):
-                            logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
-                            logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                            # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                            # logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                            logdir = "hdfs://sjfx1:9000/"+str("model/")+args.model+str("_{0}").format(num)
                             marknum=marknum+1
                             p_num=num
                             print("logdir================:",logdir)
@@ -195,7 +196,8 @@ def map_func_ekf(args, ctx):
                         print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
                         num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
                         if marknum==0 or not str(num).__eq__(p_num):
-                            logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                            # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                            logdir = "hdfs://sjfx1:9000/"+str("model/")+args.model+str("_{0}").format(num)
                             marknum=marknum+1
                             p_num=num
                             print("logdir================:",logdir)
@@ -280,8 +282,9 @@ def map_func_ekf(args, ctx):
                     }
 
                     if marknum==0 or not str(num).__eq__(p_num):
-                       logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
-                       logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                       # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}/").format(num))
+                       # logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                       logdir = "hdfs://sjfx1:9000/"+str("model/")+args.model+str("_{0}").format(num)
                        marknum=marknum+1
                        p_num=num
                        print("logdir================:",logdir)

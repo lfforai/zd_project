@@ -27,7 +27,7 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://sjfx4:7077")
 
 # os.environ['JAVA_HOME'] = conf.get(SECTION, 'JAVA_HOME')
 # spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
@@ -50,7 +50,7 @@ def fuc(iterator):
     return value_list
 
 #采样可能来源于不同的文件夹FQ，FS，FW，hdfs_path是一个总体文件的目录
-def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070",\
+def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070",\
                      group_num=4,sample_rato_FQS=1.0,sample_rato_FQS_cz=1.0,func= lambda x:x):
 
       #当func对文件名字进行分组的规则
@@ -97,7 +97,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://127.0.0.1:9000"):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000"):
 
     def rdd_sample(fractions,ep_len,max_length):
         import numpy as np
@@ -148,7 +148,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
     return  all_rdd_list
 
 #厂站-QSW _数据集训练
-def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://127.0.0.1:9000"):
+def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
 
     def map_func(iter):
         num=0
@@ -177,7 +177,7 @@ def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdf
     return  all_rdd_list
 
 #inference 准备数据集
-def data_to_inference(addrs="127.0.0.1",port="50070",cz_FQW=[],network_num=4):
+def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
     from hdfs.client import Client #hdfs和本地文件的交互
     import pyhdfs as pd #判断文件是否存在
     import numpy as  np
@@ -207,7 +207,7 @@ from dateutil import parser
 #处理将不规范的日期调整成规范日期
 spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc =spark.sparkContext
-rdd=sc.textFile("hdfs://127.0.0.1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
+rdd=sc.textFile("hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt").map(lambda x:str(x).split(",")) \
     .map(lambda x:[x[0],x[1],str(parser.parse(str(x[2])))])
 
 #日期查看日期是否有错误,2015-12-09 22:22:23 980 2015-12-09 22:22:25 1980 2015-12-09 22:22:26 980 2015-12-09 22:22:27 1980

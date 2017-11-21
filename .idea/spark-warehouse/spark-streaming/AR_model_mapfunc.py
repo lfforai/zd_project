@@ -110,8 +110,9 @@ def map_func_AR(args, ctx):
                     if(batch_ys.__len__()<40):
                        break
                     if marknum==0 or num!=p_num:
-                        logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
-                        logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                        # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
+                        # logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                        logdir = "hdfs://sjfx1:9000/"+str("model/")+args.model+str("_{0}").format(num)
                         marknum=marknum+1
                         p_num=num
                         print("logdir================:",logdir)
@@ -137,16 +138,21 @@ def map_func_AR(args, ctx):
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
                     }
                     if marknum==0 or num!=p_num:
-                        logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
-                        logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                        # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
+                        # logdir=logdir.replace("127.0.0.1:9000","sjfx1:9000")
+                        logdir = "hdfs://sjfx1:9000/"+str("model/")+args.model+str("_{0}").format(num)
                         marknum=marknum+1
                         p_num=num
                     results=[]
                     len=batch_ys.__len__()
                     if(len<40):
-                        results.extend([["o","o"]]*len)
-                        tf_feed.batch_results(results)
-                        print("40<")
+                        if len!=0:
+                           results.extend([["o","o"]]*len)
+                           tf_feed.batch_results(results)
+                           print("40<")
+                        if(len==0):
+                           tf_feed.batch_results([])
+                           print("0=")
                     else:
                         ar = tf.contrib.timeseries.ARRegressor(
                             periodicities=200, input_window_size=30, output_window_size=10,
@@ -165,4 +171,3 @@ def map_func_AR(args, ctx):
                             results.extend([["o","o"]]*num_lack)
                         tf_feed.batch_results(results)
                     i=i+1
-            tf_feed.terminate()

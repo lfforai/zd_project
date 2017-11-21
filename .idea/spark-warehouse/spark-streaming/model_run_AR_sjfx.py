@@ -11,7 +11,7 @@ import threading
 import time
 from datetime import datetime
 
-import sample_model
+import sample_model_sjfx
 import AR_model_mapfunc
 import KDE_model_mapfunc
 import ekf_model_mapfunc
@@ -22,7 +22,7 @@ from pyspark import SparkContext  # pyspark.SparkContext dd
 from pyspark.conf import SparkConf #conf
 
 from hdfs import *
-client_N = Client("http://127.0.0.1:50070")
+client_N = Client("http://sjfx1:50070")
 from pyspark.sql.types import *
 
 schema = StructType([
@@ -34,7 +34,7 @@ schema = StructType([
 os.environ['JAVA_HOME'] = "/tool_lf/java/jdk1.8.0_144/bin/java"
 os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
-conf=SparkConf().setMaster("spark://lf-MS-7976:7077")
+conf=SparkConf().setMaster("spark://sjfx4:7077")
 
 #一、参数设置
 parser = argparse.ArgumentParser()
@@ -68,7 +68,7 @@ def fuc(iterator):
                     index2=str(a).find("_",2)
                     value_list.append([a[0:index2],a[j+2],a[0:j+1],str(a)])
     return value_list
-FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070", \
+FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 sc.stop()
 
@@ -82,7 +82,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     num_ps = 0
 
     print("----------------AR-train start-------------------------------")
-    删除存储模型参数用目录
+    #删除存储模型参数用目录
     if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
        client_N.delete("/user/root/model/",recursive=True)
 
@@ -142,7 +142,7 @@ def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     # if args.mode == "train":
     # labelRDD2=
     labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs).persist()
-    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://127.0.0.1:9000/rezult/"+str(name)+".txt")
+    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+str(name)+".txt")
     # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
@@ -224,7 +224,7 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     #     num=0
     #     rezult=[]
     #     for i in iter:
-    #         if num<2:
+    #         if num<10:
     #             rezult.append(["part:="+str(partitionIndex),i])
     #         num=num+1
     #     return rezult
@@ -243,12 +243,12 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     max_l=max(each_length)
     if(max_l<min_l*1.5):
         if max_l>40000:
-            args.batch_size=int(numpy.average(each_length)/3)
+            args.batch_size=int(numpy.average(each_length)/5)
         else:
             args.batch_size=max_l
     else:
         if min>40000:
-            args.batch_size=min_l/3
+            args.batch_size=min_l/5
         else:
             args.batch_size=min_l
     if min_l==0:
@@ -261,7 +261,7 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     # if args.mode == "train":
     # labelRDD2=
     labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs).persist()
-    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://127.0.0.1:9000/rezult/"+"AR"+str(name)+".txt")
+    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+".txt")
     # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
@@ -299,8 +299,7 @@ list_tmp=[]
 # cz_FQW=re+cz_FQW
 #
 # print("需要处理的长度文件总长度=：",cz_FQW.__len__())
-# 第一轮是进行模型训练，每个tensorflow custer训练一个模型
-# f_j=0
+# # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
 # for i in list(cz_FQW):
 #     # if times==1:
 #     #     break
@@ -309,11 +308,9 @@ list_tmp=[]
 #         num=num+1
 #     else:
 #         if num%spark_work==0:
-#             if f_j>0:
-#                 break
 #             sc=SparkContext(conf=conf)
 #             print(list_tmp)
-#             ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://127.0.0.1:9000/")
+#             ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
 #             rdd=sc.union(ex)
 #             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
 #             rdd_count=rdd.count()
@@ -323,26 +320,25 @@ list_tmp=[]
 #             list_tmp=[]
 #             num=num+1
 #             list_tmp.append(i)
-#             f_j=f_j+1
 #             # times=1
 #         else:
 #             list_tmp.append(i)
 #             num=num+1
-
+#
 # print("last done：")#处理最后一组
 # print(list_tmp)
 # sc=SparkContext(conf=conf)
-# ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+# ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
 # rdd=sc.union(ex)
 # print("rdd.getNumPartitions:=",rdd.getNumPartitions())
 # rdd_count=rdd.count()
 # AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
 # sc.stop()
-print("train all over")
+# print("train all over")
 
 print("------------------AR  inference  start!-------------------------")
 # 用模型参数进行数据测试
-cz_FOW_inference_ex=sample_model.data_to_inference(addrs="127.0.0.1",port="50070",cz_FQW=cz_FOW_inference,network_num=8)
+cz_FOW_inference_ex=sample_model_sjfx.data_to_inference(addrs="sjfx1",port="50070",cz_FQW=cz_FOW_inference,network_num=8)
 cz_FOW_inference_ex=filter(lambda x:float(x[3])>50,cz_FOW_inference_ex)
 cz_FOW_inference_ex=[ i for i in cz_FOW_inference_ex]
 # print("cz_FOW_inference_ex",cz_FOW_inference_ex_1)
@@ -360,7 +356,7 @@ for i in list(cz_FOW_inference_ex):
     else:
         if num%spark_work==0:
             sc=SparkContext(conf=conf)
-            ex=sample_model.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://127.0.0.1:9000/")
+            ex=sample_model_sjfx.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
@@ -376,7 +372,7 @@ for i in list(cz_FOW_inference_ex):
 
 print("AR_model last done：")#处理最后一组
 sc=SparkContext(conf=conf)
-ex=sample_model.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+ex=sample_model_sjfx.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
 rdd=sc.union(ex)
 print("AR_model rdd.getNumPartitions:=",rdd.getNumPartitions())
 rdd_count=rdd.count()
@@ -390,6 +386,7 @@ print("AR_model all over")
 #spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 print("----------------ekf_model 开始-------------------------------------")
 args.steps=5
+args.model="ekf"
 sc=SparkContext(conf=conf)
 def fuc_2(iterator):
     value_list=[]
@@ -402,7 +399,7 @@ def fuc_2(iterator):
                     index2=str(a).find("_",2)
                     value_list.append([a[0:index2],a[j+2],a[0:j+1],str(a)])
     return value_list
-FQW,cz_FQW=sample_model.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="127.0.0.1",port="50070", \
+FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
                                          group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc_2)
 sc.stop()
 
@@ -423,7 +420,6 @@ def ekf_model_start_train(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     #     client_N
     print("args:",args)
     args.mode='train'
-    args.model="ekf"
     print("{0} ===== Start".format(datetime.now().isoformat()))
     args.batch_size=int(rdd_count*0.90/spark_worker_num/5)
 
@@ -468,7 +464,7 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     args.epochs=1
     args.mode='inference'
     cluster_AR_inference = TFCluster.run(sc, ekf_model_mapfunc.map_func_ekf, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    labelRDD = cluster_AR_inference.inference(dataRDD)
+    labelRDD = cluster_AR_inference.inference(dataRDD).persist()
     labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).persist()
     # def func_m(partitionIndex,iter):
     #     num=0
@@ -513,7 +509,7 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     # if args.mode == "train":
     # labelRDD2=
     labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs).persist()
-    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://127.0.0.1:9000/rezult/"+"ekf"+str(name)+".txt")
+    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf"+str(name)+".txt")
     # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
@@ -559,7 +555,7 @@ for i in list(cz_FQW):
     else:
         if num%spark_work==0:
             sc=SparkContext(conf=conf)
-            ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://127.0.0.1:9000/")
+            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             rdd_count=rdd.count()
@@ -569,6 +565,7 @@ for i in list(cz_FQW):
             list_tmp=[]
             num=num+1
             list_tmp.append(i)
+            f_j=f_j+1
             # times=1
         else:
             list_tmp.append(i)
@@ -576,7 +573,7 @@ for i in list(cz_FQW):
 
 print("efk_model last done：")#处理最后一组
 sc=SparkContext(conf=conf)
-ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
 rdd=sc.union(ex)
 print("efk_model rdd.getNumPartitions:=",rdd.getNumPartitions())
 ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
@@ -584,7 +581,7 @@ sc.stop()
 print("efk_model train all over")
 
 # 用模型参数进行数据测试
-cz_FOW_inference_ex=sample_model.data_to_inference(addrs="127.0.0.1",port="50070",cz_FQW=cz_FOW_inference,network_num=8)
+cz_FOW_inference_ex=sample_model_sjfx.data_to_inference(addrs="sjfx1",port="50070",cz_FQW=cz_FOW_inference,network_num=8)
 cz_FOW_inference_ex=filter(lambda x:float(x[3])>50,cz_FOW_inference_ex)
 cz_FOW_inference_ex_1=[ i for i in cz_FOW_inference_ex]
 # print("cz_FOW_inference_ex",cz_FOW_inference_ex_1)
@@ -602,7 +599,7 @@ for i in list(cz_FOW_inference_ex):
     else:
         if num%spark_work==0:
             sc=SparkContext(conf=conf)
-            ex=sample_model.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://127.0.0.1:9000/")
+            ex=sample_model_sjfx.inference_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
             rdd=sc.union(ex)
             print("rdd.getNumPartitions:=",rdd.getNumPartitions())
             ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
@@ -618,7 +615,7 @@ for i in list(cz_FOW_inference_ex):
 
 print("last done：")#处理最后一组
 sc=SparkContext(conf=conf)
-ex=sample_model.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
+ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work)
 rdd=sc.union(ex)
 print("rdd.getNumPartitions:=",rdd.getNumPartitions())
 ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
