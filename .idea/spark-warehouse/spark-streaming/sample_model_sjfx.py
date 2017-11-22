@@ -161,7 +161,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fracti
               each_max_limit=max_sample_length/partitions_num
               eachpartitions_len=int(total_count/partitions_num*0.9)
               if  eq_type=="Q":
-                  rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit*3,True)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+                  rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit*5,True)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
                   # print("电量增量:范例：==",rdd_tmp.take(100))
               else:
                   rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit,False)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动

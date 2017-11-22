@@ -76,7 +76,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
             x1=min_cast+list_dx*dx
             print(sess.run(x1))
 
-            rdd_dataset=tf.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_parallel_calls=6).map(lambda x2:x2*dx,num_parallel_calls=6)
+            rdd_dataset=tf.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_parallel_calls=4).map(lambda x2:x2*dx,num_parallel_calls=4)
 
             iterator = rdd_dataset.make_initializable_iterator()
             sess.run(iterator.initializer)
