@@ -301,42 +301,42 @@ cz_FQW=re+cz_FQW
 
 # print("需要处理的长度文件总长度=：",cz_FQW.__len__())
 # # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
-for i in list(cz_FQW):
-    # if times==1:
-    #     break
-    if num==0:
-        list_tmp.append(i)
-        num=num+1
-    else:
-        if num%spark_work==0:
-            sc=SparkContext(conf=conf)
-            print(list_tmp)
-            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-            rdd=sc.union(ex)
-            print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
-            rdd_count=rdd.count()
-            print("rdd_count:=====================",rdd_count)
-            AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-            sc.stop()
-            print("-------------next AR_model_start--------------------")
-            list_tmp=[]
-            num=num+1
-            list_tmp.append(i)
-            # times=1
-        else:
-            list_tmp.append(i)
-            num=num+1
-
-print("last done：")#处理最后一组
-print(list_tmp)
-sc=SparkContext(conf=conf)
-ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
-rdd=sc.union(ex)
-print("rdd.getNumPartitions:=",rdd.getNumPartitions())
-rdd_count=rdd.count()
-AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-sc.stop()
-print("train all over")
+# for i in list(cz_FQW):
+#     # if times==1:
+#     #     break
+#     if num==0:
+#         list_tmp.append(i)
+#         num=num+1
+#     else:
+#         if num%spark_work==0:
+#             sc=SparkContext(conf=conf)
+#             print(list_tmp)
+#             ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+#             rdd=sc.union(ex)
+#             print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
+#             rdd_count=rdd.count()
+#             print("rdd_count:=====================",rdd_count)
+#             AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+#             sc.stop()
+#             print("-------------next AR_model_start--------------------")
+#             list_tmp=[]
+#             num=num+1
+#             list_tmp.append(i)
+#             # times=1
+#         else:
+#             list_tmp.append(i)
+#             num=num+1
+#
+# print("last done：")#处理最后一组
+# print(list_tmp)
+# sc=SparkContext(conf=conf)
+# ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
+# rdd=sc.union(ex)
+# print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+# rdd_count=rdd.count()
+# AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+# sc.stop()
+# print("train all over")
 
 print("------------------AR  inference  start!-------------------------")
 num=0

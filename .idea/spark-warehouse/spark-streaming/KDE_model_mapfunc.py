@@ -216,7 +216,7 @@ def map_func_KDE(args, ctx):
                             p_up,p_value_up=normal_probability(batch_ys,n_num,p=0.95,gpu_num="0")
                             print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
                             scope.reuse_variables()
-                            p_down,p_value_down=normal_probability(batch_ys,nu_num,p=0.05,gpu_num="0")
+                            p_down,p_value_down=normal_probability(batch_ys,n_num,p=0.05,gpu_num="0")
                             print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
 
                             result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))

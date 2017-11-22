@@ -132,7 +132,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fracti
                            temp=float(value[1])-pre
                            if(temp!=0):
                              result.append([str(value[0])+"|"+str(value[2]),temp])
-                             pre=value[1]
+                             pre=float(value[1])
                            else:
                              pre=float(value[1])
                              pass
