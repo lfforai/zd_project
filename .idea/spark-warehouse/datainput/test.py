@@ -5,3 +5,4 @@ import numpy as np
 
 # tf.reduce_max()
 # with tf.Session() as sess:
+print(np.random.random())

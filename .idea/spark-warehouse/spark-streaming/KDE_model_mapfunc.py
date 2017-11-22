@@ -56,11 +56,11 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
 
     #赋值
     y_in=tf.convert_to_tensor(y,dtype=tf.float32)
-    min_cast=tf.convert_to_tensor(y.min()-2,dtype=tf.float32)#下限
+    min_cast=tf.convert_to_tensor(y.min()-50,dtype=tf.float32)#下限
     list_dx=tf.convert_to_tensor(np.linspace(1,n,n),dtype=tf.float32)
 
-    value_big_tmp=y.max()+2
-    value_little_tmp=y.min()-2
+    value_big_tmp=y.max()+50
+    value_little_tmp=y.min()-50
     value_now_tmp=value_big_tmp
 
     results=0
@@ -76,7 +76,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
             x1=min_cast+list_dx*dx
             print(sess.run(x1))
 
-            rdd_dataset=tf.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_parallel_calls=5).map(lambda x2:x2*dx,num_parallel_calls=5)
+            rdd_dataset=tf.data.Dataset.from_tensor_slices(x1).map(normal_probability_density(y_in,dx/2),num_parallel_calls=6).map(lambda x2:x2*dx,num_parallel_calls=6)
 
             iterator = rdd_dataset.make_initializable_iterator()
             sess.run(iterator.initializer)
@@ -92,7 +92,7 @@ def normal_probability(y,n=10000,p=0.95,gpu_num="0"):
                     # print("result:=",
             p_now_np=sess.run(result)
             # print("p_now_np",p_now_np)
-            if np.abs(p_now_np-p)<0.001:
+            if np.abs(p_now_np-p)<0.005:
                 results=sess.run(value_now)
                 break
             else:
@@ -209,10 +209,14 @@ def map_func_KDE(args, ctx):
                     #寻找F（x）大于95%或者5%的异常值点
                     if len>200:
                         with tf.variable_scope("D"+str(i)) as scope:
-                            p_up,p_value_up=normal_probability(batch_ys,n=500,p=0.95,gpu_num="0")
+                            import numpy as np
+                            min_k=np.min(batch_ys)
+                            max_k=np.max(batch_ys)
+                            n_num=int((max_k-min_k)/0.5)
+                            p_up,p_value_up=normal_probability(batch_ys,n_num,p=0.95,gpu_num="0")
                             print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
                             scope.reuse_variables()
-                            p_down,p_value_down=normal_probability(batch_ys,n=500,p=0.05,gpu_num="0")
+                            p_down,p_value_down=normal_probability(batch_ys,nu_num,p=0.05,gpu_num="0")
                             print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
 
                             result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))

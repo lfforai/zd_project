@@ -100,9 +100,24 @@ def map_func_AR(args, ctx):
         with tf.device(gpu_num):
             if(args.mode=="train"):
                 i=0
+                tem_len=0
+                step_each_batch=300#每次迭代次数
+                batch_size_ex=300#每次迭代的批处数
                 while not tf_feed.should_stop() and i<args.steps:
                     print("--------------------第"+str(ctx.task_index)+"task的第"+str(i+1)+"步迭代---------------------------------")
+                    # print("batch_ys_length:===============",tem_len)
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
+                    # if (i==0):
+                    #     tem_len=batch_ys.__len__()
+                    # else:
+                    #     if tem_len!=batch_ys.__len__():
+                    #        step_each_batch=1#每次迭代次数
+                    #        batch_size=1#每次迭代的批处数
+                    #        print("last batch_size,change step_each_batch:d%,batch_size:d%",(step_each_batch,batch_size))
+                    if i>args.steps-3:
+                        step_each_batch=1#每次迭代次数
+                        batch_size_ex=100#每次迭代的批处数
+                        print("change===============:")
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
@@ -121,8 +136,8 @@ def map_func_AR(args, ctx):
                         num_features=1,
                         loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                     reader = NumpyReader(data)
-                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=500, window_size=40)
-                    ar.train(input_fn=train_input_fn, steps=10)
+                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=batch_size_ex, window_size=40)
+                    ar.train(input_fn=train_input_fn, steps=step_each_batch)
                     i=i+1
                     # time.sleep((worker_num + 1) * 5)
                 tf_feed.terminate()

@@ -97,26 +97,46 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 
 #厂站-QSW
-def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000"):
+def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000"):
 
-    def rdd_sample(fractions,ep_len,max_length):
+    def rdd_sample(fractions,ep_len,max_length,is_Q=True):
         import numpy as np
         import random
         #在每个rdd的每个partition中按fractions的比例进行样本抽样
         #抽样比例：fractions,每个partiton的预估比例ep_len
         #时序模型需要，抽取连续的区间
         def map_func(iter):
-            start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
-            length=fractions*ep_len#抽样长度
-            if length>max_length:#最大抽样长度
-                 length=max_length
-            result=[]
-            num=0
-            for i in iter:
-                if num>start_point and num<start_point+length:
-                    value=str(i).split(",")
-                    result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
-                num=num+1
+            if is_Q!=True:#不是电量
+                length=min(int(ep_len*fractions),max_length)
+                start_point=int((ep_len-length-1)*np.random.random())#剩余长度中随机选者一个点作为开始点
+                result=[]
+                num=0
+                for i in iter:
+                    if num>start_point and num<start_point+length:
+                        value=str(i).split(",")
+                        result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
+                    num=num+1
+            else:#是电量求增量
+                length=min(int(ep_len*fractions),max_length)
+                start_point=int((ep_len-length-1)*np.random.random())
+                result=[]
+                num=0
+                pre=0.0
+                for i in iter:
+                    if num>start_point and num<start_point+length:
+                        if num ==start_point+1:
+                           value=str(i).split(",")
+                           pre=float(value[1])
+                        else:
+                           value=str(i).split(",")
+                           temp=float(value[1])-pre
+                           if(temp!=0):
+                             result.append([str(value[0])+"|"+str(value[2]),temp])
+                             pre=value[1]
+                           else:
+                             pre=float(value[1])
+                             pass
+                    num=num+1
             return result
         return map_func
 
@@ -125,14 +145,14 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
     all_rdd_list=[]#所有点的list集合
     if(yd_num==work_num):#需要拟合的点数量正好等于work数量
         for i in filelist:
-            cz_name=i[0]#厂站名字
-            eq_type=i[1]#原点种类 F功率 Q电量 S风速
-            file_length=float(i[3])
-            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
-            # print(filename_list)
-            cz_rdd_list=[]#每个厂+Q，W，F
-            sum_count=0
-            for j in filename_list:
+           cz_name=i[0]#厂站名字
+           eq_type=i[1]#原点种类 F功率 Q电量 S风速
+           file_length=float(i[3])
+           filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+           # print(filename_list)
+           cz_rdd_list=[]#每个厂+Q，W，F
+           sum_count=0
+           for j in filename_list:
               #每个原点按照比例进行抽样
               rdd_tmp=sc.textFile(j)
               partitions_num=rdd_tmp.getNumPartitions()
@@ -140,41 +160,85 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist="",work_num=4,fracti
               # sum_count=sum_count+total_count
               each_max_limit=max_sample_length/partitions_num
               eachpartitions_len=int(total_count/partitions_num*0.9)
-              rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+              if  eq_type=="Q":
+                  rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit*3,True)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+                  # print("电量增量:范例：==",rdd_tmp.take(100))
+              else:
+                  rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(fractions,eachpartitions_len,each_max_limit,False)).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
               cz_rdd_list.append(rdd_tmp)
-            all_rdd_list.append(sc.union(cz_rdd_list).repartition(1))
+           all_rdd_list.append(sc.union(cz_rdd_list).repartition(1))
     else:
        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
     return  all_rdd_list
 
 #厂站-QSW _数据集训练
-def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
-
-    def map_func(iter):
-        num=0
-        result=[]
-        for i in iter:
-            value=str(i).split(",")
-            result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
-            num=num+1
-        return result
-
-    yd_num=list(filelist).__len__()
-    print("本次处理点个数：=",yd_num)
-    all_rdd_list=[]#所有点的list集合
-    if(yd_num==work_num):#需要拟合的点数量正好等于work数量
-        for i in filelist:
-            cz_name=i[0]#厂站名字
-            eq_type=i[1]#原点种类 F功率 Q电量 S风速
-            file_length=float(i[3])#文件长度
-            filename_list=i[2]#文件绝对名字
-            # print(filename_list)
-            rdd_tmp=sc.textFile(hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(filename_list))
-            rdd_tmp=rdd_tmp.mapPartitions(map_func).map(lambda x:[cz_name+"|"+eq_type,x]).sample(False, 0.1, 81)#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
-            all_rdd_list.append(rdd_tmp.repartition(1))
-    else:
-        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
-    return  all_rdd_list
+# def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
+#
+#     def rdd_sample(fractions,ep_len,max_length):
+#         import numpy as np
+#         import random
+#         #在每个rdd的每个partition中按fractions的比例进行样本抽样
+#         #抽样比例：fractions,每个partiton的预估比例ep_len
+#         #时序模型需要，抽取连续的区间
+#         def map_func(iter):
+#             start_point=ep_len*(1-fractions)*np.random.random()#开始取样点
+#             length=fractions*ep_len#抽样长度
+#             if length>max_length:#最大抽样长度
+#                 length=max_length
+#             result=[]
+#             num=0
+#             for i in iter:
+#                 if num>start_point and num<start_point+length:
+#                     value=str(i).split(",")
+#                     result.append([str(value[0])+"|"+str(value[2]),float(value[1])])
+#                 num=num+1
+#             return result
+#         return map_func
+#
+#     yd_num=list(filelist).__len__()
+#     print("本次处理点个数：=",yd_num)
+#     all_rdd_list=[]#所有点的list集合
+#     if(yd_num==work_num):#需要拟合的点数量正好等于work数量
+#         for i in filelist:
+#             cz_name=i[0]#厂站名字
+#             eq_type=i[1]#原点种类 F功率 Q电量 S风速
+#             file_length=float(i[3])#文件长度
+#             filename_list=i[2]#文件绝对名字
+#             # print(filename_list)被抽样的文件
+#             rdd_tmp=sc.textFile(hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(filename_list))
+#
+#             #统计每个partition的长度，用于为每个元素编辑index
+#             def func_count(num,iter):
+#                 j=0
+#                 for i in iter:
+#                     j=j+1
+#                 return [[num,j]]
+#             each_p_list=rdd_tmp.mapPartitions(func_count).collect()#每个partition长度
+#             each_p_list_count=list(each_p_count).__len__()#有几个partition
+#             each_p_list_user=[]
+#             if each_p_list_count!=1:#如果rdd的parttion>1，需要编辑index
+#                for i in range(each_p_list_count):#累加
+#                    if i==0:
+#                       each_p_list_user.append(0)
+#                    else:
+#                       each_p_list_user.append(each_p_list_user[i-1]+each_p_list[i-1])
+#             else:
+#
+#
+#
+#             def func_index(each_p_count):
+#                 def map_func(num,iter):
+#                     result=[]
+#                     for i in iter:
+#                         each_p_count[num]
+#                     return result
+#                 return map_func
+#
+#             rdd_tmp=rdd_tmp.mapPartitions(map_func).map(lambda x:[cz_name+"|"+eq_type,x])#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+#             all_rdd_list.append(rdd_tmp.repartition(1))
+#     else:
+#         print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
+#     return  all_rdd_list
 
 #inference 准备数据集
 def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
@@ -201,6 +265,7 @@ def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
     from operator import itemgetter, attrgetter
     return sorted(inference_file_list,key=itemgetter(3))
     #['G_LYXGF', 'G_LYXGF_1_116NW001.1.txt', 0.41437244415283203]
+
 
 #二、############################################################################
 from dateutil import parser
