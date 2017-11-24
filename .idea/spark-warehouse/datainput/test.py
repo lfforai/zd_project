@@ -19,9 +19,11 @@ sorted_list=[1,4,2,3]
 print(sorted(sorted_list))
 
 import tensorflow as tf
+temp_two=tf.constant([1,2])
 zero_out_module = tf.load_op_library('/tensorflow_user_lib/zero_out.so')
 with tf.Session(''):
   print(zero_out_module.zero_out([[1, 2], [3, 4]]).eval())
+  print(temp_two.shape)
 
 
 

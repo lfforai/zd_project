@@ -156,7 +156,7 @@ def map_func_KDE(args, ctx):
     elif job_name == "worker":
         #print("tensorflow model path: {0}".format(logdir))
         tf_feed = TFNode.DataFeed(ctx.mgr, args.mode == "train")
-
+        kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
         # if(get_available_gpus_len()==15):
         #     gpu_num="/cpu:0"
         # else:
@@ -199,37 +199,37 @@ def map_func_KDE(args, ctx):
             else:#测试
                 print("no need train")
                 i=0
+                temp_two=tf.constant([1,2])
                 while not tf_feed.should_stop():
                     print("------------------第"+str(i+1)+"次 KDE—batch inference-----------------------")
                     result_list=[]
                     # Add ops to save and restore all the variables.
                     num,(batch_xs, batch_ys) = feed_dict(tf_feed.next_batch(batch_size))
+                    y=tf.convert_to_tensor(batch_ys,dtype=tf.float32)
                     len=batch_ys.__len__()
                     print("len:======",len)
                     #寻找F（x）大于95%或者5%的异常值点
                     if len>200:
                         with tf.variable_scope("D"+str(i)) as scope:
-                            import numpy as np
-                            min_k=np.min(batch_ys)
-                            max_k=np.max(batch_ys)
-                            n_num=int((max_k-min_k)/0.5)
-                            p_up,p_value_up=normal_probability(batch_ys,n_num,p=0.95,gpu_num="0")
-                            print("上异常点概率：=%f，分位值：=%f"%(p_up,p_value_up))
-                            scope.reuse_variables()
-                            p_down,p_value_down=normal_probability(batch_ys,n_num,p=0.05,gpu_num="0")
-                            print("下异常点概率：=%f，分位值：=%f"%(p_down,p_value_down))
+                            with tf.Session('') as sess:
+                                p_value_up=sess.run(kde_out_module.kde_out(batch_ys,[1,2],0.95,0.1))
+                                print("上异常点概率：=%f，分位值：=%f"%(p_value_up[0],p_value_up[1]))
+                                # scope.reuse_variables()
+                                p_value_down=sess.run(kde_out_module.kde_out(batch_ys,[1,2],0.05,0.1))
+                                print("下异常点概率：=%f，分位值：=%f"%(p_value_down[0],p_value_down[1]))
 
-                            result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))
-                            print("result_list[0]:==",result_list[0])
-                            # f=open('/lf/eer/eer_'+str(num)+'.txt','a')
-                            # for j in result_list:f.write(str(j)+'\n')
-                            # f.write('\n')
-                            # f.close()
-                            num_lack=len-result_list.__len__()
-                            if num_lack>0:
-                                result_list.extend([["o","o"]]*num_lack)
-                            tf_feed.batch_results(result_list)
-                            print("next over!")
+                                result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))
+                                print("result_list[0]:==",result_list[0])
+                                # f=open('/lf/eer/eer_'+str(num)+'.txt','a')
+                                # for j in result_list:f.write(str(j)+'\n')
+                                # f.write('\n')
+                                # f.close()
+                                num_lack=len-result_list.__len__()
+                                if num_lack>0:
+                                    result_list.extend([["o","o"]]*num_lack)
+                                tf_feed.batch_results(result_list)
+                                print("next over!")
+                            sess.close()
                         i=i+1
                     else:
                         i=i+1

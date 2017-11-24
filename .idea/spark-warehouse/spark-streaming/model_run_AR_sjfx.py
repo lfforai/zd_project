@@ -239,8 +239,8 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
                 num=num+1
             return rezult
         print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
-        labelRDD1.filter(lambda x:x[3]>500 or x[3]<-500).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+"_500"+".txt")
-        labelRDD1=labelRDD1.filter(lambda x:x[3]<500 and x[3]>-500).persist()
+        # labelRDD1.filter(lambda x:x[3]>500 or x[3]<-500).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+"_500"+".txt")
+        # labelRDD1=labelRDD1.filter(lambda x:x[3]<500 and x[3]>-500).persist()
         cluster_AR_inference.shutdown()
         print("----------------AR-inference over--------------------------")
 
@@ -283,17 +283,17 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
             # if args.mode == "train":
             # labelRDD2=
             labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs)
-            labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+".txt")
+            # labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+".txt")
             # print("labelRDD3:======",labelRDD4.take(100))
-            # def func_m(partitionIndex,iter):
-            #     num=0
-            #     rezult=[]
-            #     for i in iter:
-            #         if num<100:
-            #             rezult.append(["part:="+str(partitionIndex),i])
-            #         num=num+1
-            #     return rezult
-            # print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
+            def func_m(partitionIndex,iter):
+                num=0
+                rezult=[]
+                for i in iter:
+                    if num<100:
+                        rezult.append(["part:="+str(partitionIndex),i])
+                    num=num+1
+                return rezult
+            print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
             cluster_KDE.shutdown()
             print("----------------KDE-inference over--------------------------")
             print("{0} ===== Stop".format(datetime.now().isoformat()))
@@ -373,43 +373,44 @@ print("------------------")
 import pyhdfs as pd #判断文件是否存在
 fs_pyhdfs = pd.HdfsClient("sjfx1","50070")
 
-# for i in list(cz_FQW):
-#     # if times==1:
-#     #     break
-#     if num==0:
-#         list_tmp.append(i)
-#         num=num+1
-#     else:
-#         if num%spark_work==0:
-#             bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
-#             if bool==False:
-#                 sc=SparkContext(conf=conf)
-#                 ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
-#                 rdd=sc.union(ex).persist()
-#                 AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
-#                 sc.stop()
-#                 print("-------------next AR_model_start--------------------")
-#                 list_tmp=[]
-#                 num=num+1
-#                 list_tmp.append(i)
-#             else:
-#                 print("-------------next AR_model_start--------------------")
-#                 list_tmp=[]
-#                 num=num+1
-#                 list_tmp.append(i)
-#         else:
-#             list_tmp.append(i)
-#             num=num+1
-#
-# print("last done：")#处理最后一组
-# bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
-# if bool==False:
-#     sc=SparkContext(conf=conf)
-#     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
-#     rdd=sc.union(ex).persist()
-#     AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
-#     sc.stop()
-# print("AR_model all over")
+for i in list(cz_FQW):
+    # if times==1:
+    #     break
+    if num==0:
+        list_tmp.append(i)
+        num=num+1
+    else:
+        if num%spark_work==0:
+            bool=False
+                #fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
+            if bool==False:
+                sc=SparkContext(conf=conf)
+                ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+                rdd=sc.union(ex).persist()
+                AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+                sc.stop()
+                print("-------------next AR_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
+            else:
+                print("-------------next AR_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
+        else:
+            list_tmp.append(i)
+            num=num+1
+
+print("last done：")#处理最后一组
+bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
+if bool==False:
+    sc=SparkContext(conf=conf)
+    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+    rdd=sc.union(ex).persist()
+    AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+    sc.stop()
+print("AR_model all over")
 
 #####efk模型 开始&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 #二、数据样本抽样
