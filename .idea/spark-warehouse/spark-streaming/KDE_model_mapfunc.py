@@ -215,21 +215,31 @@ def map_func_KDE(args, ctx):
                                 from numpy import std
                                 #预先剔除2倍标准差以外的数据
                                 std_value=std(batch_ys)
+                                print("std_value:====",std_value)
                                 avg_value=numpy.average(batch_ys)
-                                batch_ys_ok=filter(lambda x:x<avg_value+2*std_value and x>avg_value-2*std_value,batch_ys)
-                                kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
-                                p_value_up=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.95,0.1))
-                                print("上异常点概率：=%f，分位值：=%f"%(p_value_up[0],p_value_up[1]))
-                                # scope.reuse_variables()
-                                p_value_down=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.05,0.1))
-                                print("下异常点概率：=%f，分位值：=%f"%(p_value_down[0],p_value_down[1]))
+                                print("avg_value:====",avg_value)
+                                batch_ys_ok=numpy.array(list(filter(lambda x:(x<avg_value+2*std_value and x>avg_value-2*std_value)
+                                                                    and (x>-1000 and x<1000)
+                                                                    ,batch_ys)))
+                                if batch_ys_ok is not None:
+                                    max=numpy.max(batch_ys_ok)
+                                    min=numpy.min(batch_ys_ok)
+                                    pitch_kde=numpy.abs(max-min)/3000
+                                    print("filter:====",pitch_kde)
+                                    if avg_value>10  or avg_value<-10  or std_value>200:
+                                        kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
+                                        p_value_up=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.95,pitch_kde))
+                                        print("上异常点概率：=%f，分位值：=%f"%(p_value_up[0],p_value_up[1]))
+                                        # scope.reuse_variables()
+                                        p_value_down=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.05,pitch_kde))
+                                        print("下异常点概率：=%f，分位值：=%f"%(p_value_down[0],p_value_down[1]))
 
-                                result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up[1] or float(x[0])<p_value_down[1] else False,zip(batch_ys,batch_xs))))
-                                print("result_list[0]:==",result_list[0])
-                                # f=open('/lf/eer/eer_'+str(num)+'.txt','a')
-                                # for j in result_list:f.write(str(j)+'\n')
-                                # f.write('\n')
-                                # f.close()
+                                        result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up[1] or float(x[0])<p_value_down[1] else False,zip(batch_ys,batch_xs))))
+                                        print("result_list[0]:==",result_list[0])
+                                    else:
+                                        print("都是正常数值")
+                                else:#数据整体异常
+                                    result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>1000 or float(x[0])<-1000 else False,zip(batch_ys,batch_xs))))
                                 num_lack=len-result_list.__len__()
                                 if num_lack>0:
                                     result_list.extend([["o","o"]]*num_lack)

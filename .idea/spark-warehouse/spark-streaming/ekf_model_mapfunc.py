@@ -259,8 +259,10 @@ def map_func_ekf(args, ctx):
                 tf_feed.terminate()
 
             else:#测试"inference"
-                # Add ops to save and restore all the variables.
+                # Add ops to save and restore all the variables
+                i=0
                 while not tf_feed.should_stop():
+                    print("------------------第"+str(i+1)+"次 ekf—batch inference-----------------------")
                     tf.reset_default_graph()
                     # Create some variables.
                     T = tf.Variable(0.05,name="T",dtype=tf.float32) #测量参数
@@ -276,6 +278,7 @@ def map_func_ekf(args, ctx):
 
                     num,(xs_info,batch_xs,batch_ys)= feed_dict_fence(tf_feed.next_batch(batch_size))
                     list_length=batch_ys.__len__()
+                    temp_shape=tf.zeros([list_length,3])#传递shape的参数
                     print("length:=========",list_length)
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
@@ -297,36 +300,15 @@ def map_func_ekf(args, ctx):
                     with tf.Session() as sess:
                         saver.restore(sess,logdir)
                         print("Model restored.")
-                        # sess.run(init_op)
-                        # sess.run(local_init_op)
-                        for i in range(batch_ys.__len__()):
-                            if i==0:
-                                a_t_t_1=tf.assign(a_t_t_1,T*batch_ys[0]+c)#1
-                                p_t_t_1=tf.assign(p_t_t_1,T*Q*T+Q)#2
-
-                                F=Z*p_t_t_1*Z+H#3
-                                a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[0]-Z*a_t_t_1-d))#4
-                                p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
-                                #预测的y_st
-                                # sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
-                                # rep=sess.run(Z*a_t+d)
-                                # result.append((batch_ys[i],rep,batch_ys[i]-rep))
-                            else:
-                                a_t_t_1=tf.assign(a_t_t_1,T*a_t+c)#1
-                                p_t_t_1=tf.assign(p_t_t_1,T*p_t_1*T+Q)#2
-
-                                F=Z*p_t_t_1*Z+H#3
-                                a_t=tf.assign(a_t,a_t_t_1+p_t_t_1*Z/F*Z*(batch_ys[i]-Z*a_t_t_1-d))#4
-                                p_t_1=tf.assign(p_t_1,p_t_t_1-p_t_t_1*Z/F*Z*p_t_t_1)#5
-                                #预测的y_st
-                                # sess.run([a_t_t_1, p_t_t_1,F,a_t,p_t_1])
-                                rep=sess.run(Z*a_t+d)
-                                # print("rep=======:",rep)
-                                result.append([batch_ys[i],rep,batch_ys[i]-rep])
-                        result =[[num,e[0],e[1],e[2],l] for e,l in zip(result,xs_info)]
+                        ekf_out_module = tf.load_op_library('/tensorflow_user_lib/ekf_out.so')
+                        c_N,Q_N,T_N,H_N,Z_N,d_N=sess.run([c,Q,T,H,Z,d])
+                        out_put=sess.run(ekf_out_module.kde_out(batch_ys_ok,temp_shape,
+                                                                   c_N,Q_N,T_N,H_N,Z_N,d_N))
+                        result =[[num,e[0],e[1],e[2],l] for e,l in zip(out_put,xs_info)]
                         num_lack=list_length-result.__len__()
                         if num_lack>0:
                             result.extend([["o","o","o"]]*num_lack)
                         tf_feed.batch_results(result)
-                    # sess.close()
+                    sess.close()
+                    i=i+1
             tf_feed.terminate()

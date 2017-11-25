@@ -216,14 +216,14 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
                     break
             if(max_l<min_l*1.5):
                 if max_l>40000:
-                    args.batch_size=int(numpy.average(each_length)/3)
+                    args.batch_size=int(numpy.average(each_length)/4)
                 else:
                     args.batch_size=max_l
             else:
                 if min_l>40000:
                     args.batch_size=min_l/2
                 else:
-                    args.batch_size=20000
+                    args.batch_size=40000
         print("args.batch_size=========================",args.batch_size)
         args.epochs=1
         print(args.mode)
@@ -267,14 +267,14 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
                     break
             if(max_l<min_l*1.5):
                 if max_l>40000:
-                    args.batch_size=int(numpy.average(each_length)/3)
+                    args.batch_size=int(numpy.average(each_length)/4)
                 else:
                     args.batch_size=max_l
             else:
                 if min_l>40000:
                     args.batch_size=min_l/2
                 else:
-                    args.batch_size=20000
+                    args.batch_size=40000
                 # exit()
             print("args.batch_size=========================",args.batch_size)
             args.epochs=1
@@ -450,8 +450,8 @@ def ekf_model_start_train(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     args.mode='train'
     print("{0} ===== Start".format(datetime.now().isoformat()))
     args.batch_size=int(rdd_count*0.90/spark_worker_num/20)
-    if args.batch_size>3000:
-        args.batch_size=3000
+    if args.batch_size>1000:
+        args.batch_size=1000
     else:
         pass
 
@@ -491,7 +491,7 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
                 break
         if(max_l<min_l*1.5):
             if max_l>40000:
-                args.batch_size=3000
+                args.batch_size=int(numpy.average(each_length)/4)
                     #int(numpy.average(each_length)/3)
             else:
                 args.batch_size=max_l
@@ -499,7 +499,7 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
             if min_l>40000:
                 args.batch_size=min_l/2
             else:
-                args.batch_size=3000
+                args.batch_size=40000
                     #20000
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
@@ -546,14 +546,14 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
                 break
         if(max_l<min_l*1.5):
             if max_l>40000:
-                args.batch_size=int(numpy.average(each_length)/3)
+                args.batch_size=int(numpy.average(each_length)/4)
             else:
                 args.batch_size=max_l
         else:
             if min_l>40000:
                 args.batch_size=min_l/2
             else:
-                args.batch_size=20000
+                args.batch_size=40000
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     args.mode='inference'
