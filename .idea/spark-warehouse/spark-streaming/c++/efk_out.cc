@@ -38,8 +38,12 @@ REGISTER_OP("EfkOut")
       .Input("ekf_op_in: float")
       .Input("ekf_shape: int32")//2个shape长度
       .Output("ekf_op_out: float")
-      .Attr("p_value: float")
-      .Attr("pitch: float");
+      .Attr("c: float")
+      .Attr("Q: float")
+      .Attr("T: float")
+      .Attr("H: float")
+      .Attr("Z: float")
+      .Attr("d: float");
 
 using namespace tensorflow;
 
