@@ -411,7 +411,7 @@ print("AR_model all over")
 #二、数据样本抽样
 #spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 print("----------------ekf_model 开始-------------------------------------")
-args.steps=6
+args.steps=10
 args.model="ekf"
 sc=SparkContext(conf=conf)
 def fuc_2(iterator):
@@ -503,7 +503,15 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     cluster_AR_inference = TFCluster.run(sc, ekf_model_mapfunc.map_func_ekf, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster_AR_inference.inference(dataRDD)
     labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).persist()
-    print(labelRDD1.take(100))
+    def func_m(partitionIndex,iter):
+        num=0
+        rezult=[]
+        for i in iter:
+            if num<10:
+                rezult.append(["part:="+str(partitionIndex),i])
+            num=num+1
+        return rezult
+    print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     # def func_m(partitionIndex,iter):
     #     num=0
     #     rezult=[]
