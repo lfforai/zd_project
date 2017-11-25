@@ -103,23 +103,27 @@ class KdeOutOp : public OpKernel {
 	  float dx=pitch;
 	  int n=(int)((max-min)/dx);
       int if_first=1;
+      float dis_length=0.0;
       std::cout<<"开始迭代：=========="<<endl;
 	  while(true){
 		   if (if_first==1)
-		       { for(int i=0;i<n-1;i++){
+		      { for(int i=0;i<n-1;i++){
 			        p_add=p_add+normal_probability_density(y,i*dx+min_cast+dx/2)*dx;
 		           }//求积分计算分位数点
 		           if_first=if_first+1;
 		           p_now_np=p_add;
 		           p_last_np=p_now_np;
 		           last_value=value_now;
-		       } //第一次
+		           p_add=0;
+		      } //第一次
 		   else{
 			  if(value_now>last_value)//只计算减少的概率部分
-			  { if(if_first%5==0)
-				  n=(int)(value_now-last_value)/(dx/if_first);
+			  { dis_length=value_now-last_value;//两个区间之间的长度
+				if(dis_length<1)
+				  {n=100;
+				   dx=dis_length/n;}
 			    else
-			      n=(int)(value_now-last_value)/(dx);
+			       n=(int)(dis_length/dx);
 			    min_cast=last_value;//替换当前值
 			    for(int i=0;i<n-1;i++){
 			    	     p_add=p_add+normal_probability_density(y,i*dx+min_cast+dx/2)*dx;
@@ -128,13 +132,16 @@ class KdeOutOp : public OpKernel {
 			    p_now_np=p_last_np+p_add;
 			    p_last_np=p_now_np;
 			    last_value=value_now;
+			    p_add=0;
 			  }
 			  else{
 				  if(value_now<last_value)//只计算增加的概率部分
-				  { if(if_first%5==0)
-					  n=(int)(last_value-value_now)/(dx/if_first);
+				  { dis_length=last_value-value_now;//两个区间之间的长度
+					if(dis_length<1)
+					  {n=100;
+					   dx=dis_length/n;}
 				    else
-				      n=(int)(last_value-value_now)/(dx);
+				       n=(int)(dis_length/dx);
 				    min_cast=value_now;//替换当前值
 				    for(int i=0;i<n-1;i++){
 				    	    p_add=p_add+normal_probability_density(y,i*dx+min_cast+dx/2)*dx;
@@ -143,6 +150,7 @@ class KdeOutOp : public OpKernel {
 				    p_now_np=p_last_np-p_add;
 				    p_last_np=p_now_np;
 				    last_value=value_now;
+				    p_add=0;
 			     }
 		      }
 		    }

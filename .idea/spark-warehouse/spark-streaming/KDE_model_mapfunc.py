@@ -156,7 +156,6 @@ def map_func_KDE(args, ctx):
     elif job_name == "worker":
         #print("tensorflow model path: {0}".format(logdir))
         tf_feed = TFNode.DataFeed(ctx.mgr, args.mode == "train")
-        kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
         # if(get_available_gpus_len()==15):
         #     gpu_num="/cpu:0"
         # else:
@@ -212,13 +211,20 @@ def map_func_KDE(args, ctx):
                     if len>200:
                         with tf.variable_scope("D"+str(i)) as scope:
                             with tf.Session('') as sess:
-                                p_value_up=sess.run(kde_out_module.kde_out(batch_ys,[1,2],0.95,0.1))
+                                #剔除在3倍方差以外的异常点
+                                from numpy import std
+                                #预先剔除2倍标准差以外的数据
+                                std_value=std(batch_ys)
+                                avg_value=numpy.average(batch_ys)
+                                batch_ys_ok=filter(lambda x:x<avg_value+2*std_value and x>avg_value-2*std_value,batch_ys)
+                                kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
+                                p_value_up=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.95,0.1))
                                 print("上异常点概率：=%f，分位值：=%f"%(p_value_up[0],p_value_up[1]))
                                 # scope.reuse_variables()
-                                p_value_down=sess.run(kde_out_module.kde_out(batch_ys,[1,2],0.05,0.1))
+                                p_value_down=sess.run(kde_out_module.kde_out(batch_ys_ok,[1,2],0.05,0.1))
                                 print("下异常点概率：=%f，分位值：=%f"%(p_value_down[0],p_value_down[1]))
 
-                                result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up or float(x[0])<p_value_down else False,zip(batch_ys,batch_xs))))
+                                result_list=list(map(lambda x:[x[0],x[1][0],x[1][1],x[1][2]],filter(lambda x:True if float(x[0])>p_value_up[1] or float(x[0])<p_value_down[1] else False,zip(batch_ys,batch_xs))))
                                 print("result_list[0]:==",result_list[0])
                                 # f=open('/lf/eer/eer_'+str(num)+'.txt','a')
                                 # for j in result_list:f.write(str(j)+'\n')
