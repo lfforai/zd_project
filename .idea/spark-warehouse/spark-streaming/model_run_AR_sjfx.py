@@ -183,7 +183,6 @@ def AR_model_start_train(sc,args,spark_worker_num,dataRDD,rdd_count,name):
 
 def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
 
-    if bool==False:
         global client_N
         #['G_LYXGF', 'Q', 'G_LYXGF_1_315NQ001.S.txt|G_LYXGF_1_315NQ002.S.txt|G_LYXGF_1_316NQ001.S.txt|G_LYXGF_1_316NQ002.S.txt|G_LYXGF_1_317NQ001.S.txt|G_LYXGF_1_317NQ002.S.txt'
         num_executors = spark_worker_num
@@ -283,22 +282,20 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
             # if args.mode == "train":
             # labelRDD2=
             labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs)
-            # labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+".txt")
+            labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"AR"+str(name)+".txt")
             # print("labelRDD3:======",labelRDD4.take(100))
-            def func_m(partitionIndex,iter):
-                num=0
-                rezult=[]
-                for i in iter:
-                    if num<100:
-                        rezult.append(["part:="+str(partitionIndex),i])
-                    num=num+1
-                return rezult
-            print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
+            # def func_m(partitionIndex,iter):
+            #     num=0
+            #     rezult=[]
+            #     for i in iter:
+            #         if num<100:
+            #             rezult.append(["part:="+str(partitionIndex),i])
+            #         num=num+1
+            #     return rezult
+            # print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
             cluster_KDE.shutdown()
             print("----------------KDE-inference over--------------------------")
             print("{0} ===== Stop".format(datetime.now().isoformat()))
-    else:
-        print("/rezult/"+"AR"+str(name)+".txt is  exsit!")
 
 
 #启动进程，按每worker个为一组进行进行数据分解
@@ -327,48 +324,46 @@ cz_FQW=re+cz_FQW
 
 # print("需要处理的长度文件总长度=：",cz_FQW.__len__())
 # # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
-# for i in list(cz_FQW):
-#     # if times==1:
-#     #     break
-#     if num==0:
-#         list_tmp.append(i)
-#         num=num+1
-#     else:
-#         if num%spark_work==0:
-#             sc=SparkContext(conf=conf)
-#             print(list_tmp)
-#             ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-#             rdd=sc.union(ex).persist()
-#             print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
-#             rdd_count=rdd.count()
-#             print("rdd_count:=====================",rdd_count)
-#             AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-#             sc.stop()
-#             print("-------------next AR_model_start--------------------")
-#             list_tmp=[]
-#             num=num+1
-#             list_tmp.append(i)
-#             # times=1
-#         else:
-#             list_tmp.append(i)
-#             num=num+1
-#
-# print("last done：")#处理最后一组
-# print(list_tmp)
-# sc=SparkContext(conf=conf)
-# ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
-# rdd=sc.union(ex).persist()
-# print("rdd.getNumPartitions:=",rdd.getNumPartitions())
-# rdd_count=rdd.count()
-# AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-# sc.stop()
-# print("train all over")
+for i in list(cz_FQW):
+    # if times==1:
+    #     break
+    if num==0:
+        list_tmp.append(i)
+        num=num+1
+    else:
+        if num%spark_work==0:
+            sc=SparkContext(conf=conf)
+            print(list_tmp)
+            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+            rdd=sc.union(ex).persist()
+            print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
+            rdd_count=rdd.count()
+            print("rdd_count:=====================",rdd_count)
+            AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+            sc.stop()
+            print("-------------next AR_model_start--------------------")
+            list_tmp=[]
+            num=num+1
+            list_tmp.append(i)
+            # times=1
+        else:
+            list_tmp.append(i)
+            num=num+1
+
+print("last done：")#处理最后一组
+print(list_tmp)
+sc=SparkContext(conf=conf)
+ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
+rdd=sc.union(ex).persist()
+print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+rdd_count=rdd.count()
+AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+sc.stop()
+print("train all over")
 
 # print("------------------AR  inference  start!-------------------------")
 num=0
 list_tmp=[]
-for i in cz_FQW:
-    print(i)
 print("------------------")
 import pyhdfs as pd #判断文件是否存在
 fs_pyhdfs = pd.HdfsClient("sjfx1","50070")
@@ -446,12 +441,12 @@ def ekf_model_start_train(sc,args,spark_worker_num,dataRDD,rdd_count,name):
     # if client_N.list("/user/root/").__contains__("model") and args.mode=='train':
     #     client_N.delete("/user/root/model/",recursive=True)
     #     client_N
-    print("args:",args)
+    args.steps=5
     args.mode='train'
     print("{0} ===== Start".format(datetime.now().isoformat()))
     args.batch_size=int(rdd_count*0.90/spark_worker_num/20)
-    if args.batch_size>1000:
-        args.batch_size=1000
+    if args.batch_size>500:
+        args.batch_size=500
     else:
         pass
 
@@ -504,23 +499,25 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     args.mode='inference'
+    args.model="ekf"
     cluster_AR_inference = TFCluster.run(sc, ekf_model_mapfunc.map_func_ekf, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster_AR_inference.inference(dataRDD)
     labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).persist()
-    def func_m(partitionIndex,iter):
-        num=0
-        rezult=[]
-        for i in iter:
-            if num<10:
-                rezult.append(["part:="+str(partitionIndex),i])
-            num=num+1
-        return rezult
-    #剔除差异在-500 和 500以上的明显错误数据
-    labelRDD1.filter(lambda x:x[3]>500 or x[3]<-500).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf"+str(name)+"_500"+".txt")
-    labelRDD1=labelRDD1.filter(lambda x:x[3]<500 and x[3]>-500).persist()
+    print(labelRDD1.take(100))
+    # def func_m(partitionIndex,iter):
+    #     num=0
+    #     rezult=[]
+    #     for i in iter:
+    #         if num<10:
+    #             rezult.append(["part:="+str(partitionIndex),i])
+    #         num=num+1
+    #     return rezult
+    # #剔除差异在-500 和 500以上的明显错误数据
+    # labelRDD1.filter(lambda x:x[3]>500 or x[3]<-500).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf"+str(name)+"_500"+".txt")
+    # labelRDD1=labelRDD1.filter(lambda x:x[3]<500 and x[3]>-500).persist()
     #['G_CFYH|W', -1173.0488, 876.0, -2049.0488, 'G_CFYH_1_002FW001|2016-5-13 7:47:38.359000']
     cluster_AR_inference.shutdown()
-    print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
+    # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     # .saveAsTextFile(args.output)
     print("----------------ekf-inference over--------------------------")
 
@@ -557,12 +554,13 @@ def ekf_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     args.mode='inference'
+    args.model='KDE'
     cluster_KDE = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     # if args.mode == "train":
     # labelRDD2=
     labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs)
     labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf"+str(name)+".txt")
-    # print("labelRDD3:======",labelRDD4.take(100))
+    # # print("labelRDD3:======",labelRDD4.take(100))
     # def func_m(partitionIndex,iter):
     #     num=0
     #     rezult=[]
@@ -595,42 +593,43 @@ for value in new_cz_FQW:
     j=j+1
 cz_FQW=re+cz_FQW
 
-# print("需要处理的长度文件总长度=：",cz_FQW.__len__())
-# # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
-# for i in list(cz_FQW):
-#     # if times==1:
-#     #     break
-#     if num==0:
-#         list_tmp.append(i)
-#         num=num+1
-#     else:
-#         if num%spark_work==0:
-#             sc=SparkContext(conf=conf)
-#             ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-#             rdd=sc.union(ex).persist()
-#             rdd_count=rdd.count()
-#             ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-#             sc.stop()
-#             print("-------------next efk_model_start--------------------")
-#             list_tmp=[]
-#             num=num+1
-#             list_tmp.append(i)
-#             # times=1
-#         else:
-#             list_tmp.append(i)
-#             num=num+1
-#
-# print("efk_model last done：")#处理最后一组
-# sc=SparkContext(conf=conf)
-# ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-# rdd=sc.union(ex).persist()
-# ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-# sc.stop()
-# print("efk_model train all over")
+#print("需要处理的长度文件总长度=：",cz_FQW.__len__())
+# 第一轮是进行模型训练，每个tensorflow custer训练一个模型
+for i in list(cz_FQW):
+    # if times==1:
+    #     break
+    if num==0:
+        list_tmp.append(i)
+        num=num+1
+    else:
+        if num%spark_work==0:
+            sc=SparkContext(conf=conf)
+            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+            rdd=sc.union(ex).persist()
+            rdd_count=rdd.count()
+            ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+            sc.stop()
+            print("-------------next efk_model_start--------------------")
+            list_tmp=[]
+            num=num+1
+            list_tmp.append(i)
+            # times=1
+        else:
+            list_tmp.append(i)
+            num=num+1
+
+print("efk_model last done：")#处理最后一组
+sc=SparkContext(conf=conf)
+ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+rdd=sc.union(ex).persist()
+ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
+sc.stop()
+print("efk_model train all over")
 
 # 用模型参数进行数据测试
 num=0
 list_tmp=[]
+# print("aaa:==",cz_FQW)
 
 for i in list(cz_FQW):
     # if times==1:

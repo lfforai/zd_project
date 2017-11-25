@@ -165,14 +165,14 @@ def map_func_ekf(args, ctx):
                         with tf.Session() as sess:
                             sess.run(init_op)
                             sess.run(local_init_op)
-                            print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                            # print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
                             for n in range(int(100)):
                                 # sess.run(tf.initialize_all_variables())
                                 sess.run(train_op,feed_dict={y:batch_ys})
                             save_path = saver.save(sess, logdir)
                             print("Model saved in file: %s" % save_path)
                             # saver.restore(sess,"/tmp/my-model")
-                            print("after ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                            # print("after ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
                             print("H:=",sess.run(H))
                         sess.close()
                     else:
@@ -245,14 +245,14 @@ def map_func_ekf(args, ctx):
                             saver.restore(sess,logdir)
                             print("Model restored.")
                             print("before H:=",sess.run(H))
-                            print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                            # print("before ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
                             for n in range(int(100)):
                                 # sess.run(tf.initialize_all_variables())
                                 sess.run(train_op,feed_dict={y:batch_ys})
                             save_path = saver.save(sess, logdir)
                             print("Model saved in file: %s" % save_path)
                             # saver.restore(sess,"/tmp/my-model")
-                            print("after ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
+                            # print("after ptimizer:loss=",sess.run(loss,feed_dict={y:batch_ys}))
                             print("H:=",sess.run(H))
                         sess.close()
                     # time.sleep((worker_num + 1) * 5)
@@ -300,9 +300,9 @@ def map_func_ekf(args, ctx):
                     with tf.Session() as sess:
                         saver.restore(sess,logdir)
                         print("Model restored.")
-                        ekf_out_module = tf.load_op_library('/tensorflow_user_lib/ekf_out.so')
+                        efk_out_module = tf.load_op_library('/tensorflow_user_lib/efk_out.so')
                         c_N,Q_N,T_N,H_N,Z_N,d_N=sess.run([c,Q,T,H,Z,d])
-                        out_put=sess.run(ekf_out_module.kde_out(batch_ys_ok,temp_shape,
+                        out_put=sess.run(efk_out_module.efk_out(batch_ys,sess.run(temp_shape),
                                                                    c_N,Q_N,T_N,H_N,Z_N,d_N))
                         result =[[num,e[0],e[1],e[2],l] for e,l in zip(out_put,xs_info)]
                         num_lack=list_length-result.__len__()

@@ -114,7 +114,7 @@ def map_func_AR(args, ctx):
                     #        step_each_batch=1#每次迭代次数
                     #        batch_size=1#每次迭代的批处数
                     #        print("last batch_size,change step_each_batch:d%,batch_size:d%",(step_each_batch,batch_size))
-                    if i>args.steps-3:
+                    if i>args.steps-2:
                         step_each_batch=1#每次迭代次数
                         batch_size_ex=100#每次迭代的批处数
                         print("change===============:")
