@@ -322,8 +322,8 @@ for i in cz_FQW:
 print("------------------")
 cz_FQW=re+cz_FQW
 
-# print("需要处理的长度文件总长度=：",cz_FQW.__len__())
-# # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
+print("需要处理的长度文件总长度=：",cz_FQW.__len__())
+# 第一轮是进行模型训练，每个tensorflow custer训练一个模型
 for i in list(cz_FQW):
     # if times==1:
     #     break
