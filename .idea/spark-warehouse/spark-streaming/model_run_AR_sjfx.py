@@ -614,45 +614,45 @@ cz_FQW=re+cz_FQW
 
 #print("需要处理的长度文件总长度=：",cz_FQW.__len__())
 # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
-for i in list(cz_FQW):
-    # if times==1:
-    #     break
-    if num==0:
-        list_tmp.append(i)
-        num=num+1
-    else:
-        if num%spark_work==0:
-            bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
-            if(bool==False):
-                sc=SparkContext(conf=conf)
-                ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-                rdd=sc.union(ex).persist()
-                rdd_count=rdd.count()
-                ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
-                sc.stop()
-                print("-------------next efk_model_start--------------------")
-                list_tmp=[]
-                num=num+1
-                list_tmp.append(i)
-            else:
-                print("-------------next efk_model_start--------------------")
-                list_tmp=[]
-                num=num+1
-                list_tmp.append(i)
-            # times=1
-        else:
-            list_tmp.append(i)
-            num=num+1
-
-print("efk_model last done：")#处理最后一组
-bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
-if(bool==False):
-    sc=SparkContext(conf=conf)
-    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-    rdd=sc.union(ex).persist()
-    ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
-    sc.stop()
-print("efk_model train all over")
+# for i in list(cz_FQW):
+#     # if times==1:
+#     #     break
+#     if num==0:
+#         list_tmp.append(i)
+#         num=num+1
+#     else:
+#         if num%spark_work==0:
+#             bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+#             if(bool==False):
+#                 sc=SparkContext(conf=conf)
+#                 ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+#                 rdd=sc.union(ex).persist()
+#                 rdd_count=rdd.count()
+#                 ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+#                 sc.stop()
+#                 print("-------------next efk_model_start--------------------")
+#                 list_tmp=[]
+#                 num=num+1
+#                 list_tmp.append(i)
+#             else:
+#                 print("-------------next efk_model_start--------------------")
+#                 list_tmp=[]
+#                 num=num+1
+#                 list_tmp.append(i)
+#             # times=1
+#         else:
+#             list_tmp.append(i)
+#             num=num+1
+#
+# print("efk_model last done：")#处理最后一组
+# bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+# if(bool==False):
+#     sc=SparkContext(conf=conf)
+#     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+#     rdd=sc.union(ex).persist()
+#     ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+#     sc.stop()
+# print("efk_model train all over")
 
 # 用模型参数进行数据测试
 num=0

@@ -304,11 +304,11 @@ def map_func_ekf(args, ctx):
                         c_N,Q_N,T_N,H_N,Z_N,d_N=sess.run([c,Q,T,H,Z,d])
                         out_put=sess.run(efk_out_module.efk_out(batch_ys,sess.run(temp_shape),
                                                                    c_N,Q_N,T_N,H_N,Z_N,d_N))
-                        result =[[num,e[0],e[1],e[2],l] for e,l in zip(out_put,xs_info)]
-                        num_lack=list_length-result.__len__()
-                        if num_lack>0:
-                            result.extend([["o","o","o"]]*num_lack)
-                        tf_feed.batch_results(result)
                     sess.close()
+                    result =[[num,e[0],e[1],e[2],l] for e,l in zip(out_put,xs_info)]
+                    num_lack=list_length-result.__len__()
+                    if num_lack>0:
+                        result.extend([["o","o","o"]]*num_lack)
+                    tf_feed.batch_results(result)
                     i=i+1
             tf_feed.terminate()
