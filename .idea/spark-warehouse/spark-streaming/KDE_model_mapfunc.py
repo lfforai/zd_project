@@ -224,7 +224,7 @@ def map_func_KDE(args, ctx):
                                 if batch_ys_ok is not None:
                                     max=numpy.max(batch_ys_ok)
                                     min=numpy.min(batch_ys_ok)
-                                    pitch_kde=numpy.abs(max-min)/3000
+                                    pitch_kde=numpy.abs(max-min)/5000
                                     print("filter:====",pitch_kde)
                                     if avg_value>10  or avg_value<-10  or std_value>200:
                                         kde_out_module = tf.load_op_library('/tensorflow_user_lib/kde_out.so')
