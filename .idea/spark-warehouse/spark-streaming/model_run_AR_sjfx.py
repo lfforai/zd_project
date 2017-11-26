@@ -36,6 +36,9 @@ os.environ["PYSPARK_PYTHON"] = "/root/anaconda3/bin/python"
 os.environ["HADOOP_USER_NAME"] = "root"
 conf=SparkConf().setMaster("spark://sjfx4:7077")
 
+import pyhdfs as pd #判断文件是否存在
+fs_pyhdfs = pd.HdfsClient("sjfx1","50070")
+
 #一、参数设置
 parser = argparse.ArgumentParser()
 parser.add_argument("-b", "--batch_size", help="number of records per batch", type=int, default=10000)
@@ -317,12 +320,14 @@ for value in new_cz_FQW:
     re.append([value[0]+"_"+str(j)+"$",value[1],value[2],value[3]])
     j=j+1
 
-for i in cz_FQW:
-    print(i)
+
 print("------------------")
 cz_FQW=re+cz_FQW
 
-print("需要处理的长度文件总长度=：",cz_FQW.__len__())
+# for i in cz_FQW:
+#     print(i)
+
+#print("需要处理的长度文件总长度=：",cz_FQW.__len__())
 # 第一轮是进行模型训练，每个tensorflow custer训练一个模型
 for i in list(cz_FQW):
     # if times==1:
@@ -332,19 +337,26 @@ for i in list(cz_FQW):
         num=num+1
     else:
         if num%spark_work==0:
-            sc=SparkContext(conf=conf)
-            print(list_tmp)
-            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-            rdd=sc.union(ex).persist()
-            print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
-            rdd_count=rdd.count()
-            print("rdd_count:=====================",rdd_count)
-            AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-            sc.stop()
-            print("-------------next AR_model_start--------------------")
-            list_tmp=[]
-            num=num+1
-            list_tmp.append(i)
+            bool=fs_pyhdfs.exists("/model/"+"AR_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+            if(bool==False):
+                sc=SparkContext(conf=conf)
+                print(list_tmp)
+                ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+                rdd=sc.union(ex).persist()
+                print("rdd.getNumPartitions:==============",rdd.getNumPartitions())
+                rdd_count=rdd.count()
+                print("rdd_count:=====================",rdd_count)
+                AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+                sc.stop()
+                print("-------------next AR_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
+            else:
+                print("-------------next AR_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
             # times=1
         else:
             list_tmp.append(i)
@@ -352,21 +364,21 @@ for i in list(cz_FQW):
 
 print("last done：")#处理最后一组
 print(list_tmp)
-sc=SparkContext(conf=conf)
-ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
-rdd=sc.union(ex).persist()
-print("rdd.getNumPartitions:=",rdd.getNumPartitions())
-rdd_count=rdd.count()
-AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-sc.stop()
+bool=fs_pyhdfs.exists("/model/"+"AR_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+if(bool==False):
+    sc=SparkContext(conf=conf)
+    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,fractions=0.30,max_sample_length=10000,work_num=spark_work,hdfs_addr="hdfs://sjfx1:9000/")
+    rdd=sc.union(ex).persist()
+    print("rdd.getNumPartitions:=",rdd.getNumPartitions())
+    rdd_count=rdd.count()
+    AR_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+    sc.stop()
 print("train all over")
 
 # print("------------------AR  inference  start!-------------------------")
 num=0
 list_tmp=[]
 print("------------------")
-import pyhdfs as pd #判断文件是否存在
-fs_pyhdfs = pd.HdfsClient("sjfx1","50070")
 
 for i in list(cz_FQW):
     # if times==1:
@@ -376,13 +388,12 @@ for i in list(cz_FQW):
         num=num+1
     else:
         if num%spark_work==0:
-            bool=False
-                #fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
+            bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(list_tmp[0][0])+".txt")
             if bool==False:
                 sc=SparkContext(conf=conf)
                 ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
                 rdd=sc.union(ex).persist()
-                AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+                AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0][0])
                 sc.stop()
                 print("-------------next AR_model_start--------------------")
                 list_tmp=[]
@@ -398,12 +409,12 @@ for i in list(cz_FQW):
             num=num+1
 
 print("last done：")#处理最后一组
-bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0]))+".txt")
+bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(str(list_tmp[0][0]))+".txt")
 if bool==False:
     sc=SparkContext(conf=conf)
     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
     rdd=sc.union(ex).persist()
-    AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+    AR_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0][0])
     sc.stop()
 print("AR_model all over")
 
@@ -611,27 +622,36 @@ for i in list(cz_FQW):
         num=num+1
     else:
         if num%spark_work==0:
-            sc=SparkContext(conf=conf)
-            ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-            rdd=sc.union(ex).persist()
-            rdd_count=rdd.count()
-            ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-            sc.stop()
-            print("-------------next efk_model_start--------------------")
-            list_tmp=[]
-            num=num+1
-            list_tmp.append(i)
+            bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+            if(bool==False):
+                sc=SparkContext(conf=conf)
+                ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+                rdd=sc.union(ex).persist()
+                rdd_count=rdd.count()
+                ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+                sc.stop()
+                print("-------------next efk_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
+            else:
+                print("-------------next efk_model_start--------------------")
+                list_tmp=[]
+                num=num+1
+                list_tmp.append(i)
             # times=1
         else:
             list_tmp.append(i)
             num=num+1
 
 print("efk_model last done：")#处理最后一组
-sc=SparkContext(conf=conf)
-ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
-rdd=sc.union(ex).persist()
-ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0])
-sc.stop()
+bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+if(bool==False):
+    sc=SparkContext(conf=conf)
+    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+    rdd=sc.union(ex).persist()
+    ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
+    sc.stop()
 print("efk_model train all over")
 
 # 用模型参数进行数据测试
@@ -647,12 +667,12 @@ for i in list(cz_FQW):
         num=num+1
     else:
         if num%spark_work==0:
-            bool=fs_pyhdfs.exists("/rezult/"+"ekf"+str(list_tmp[0])+".txt")
+            bool=fs_pyhdfs.exists("/rezult/"+"ekf"+str(list_tmp[0][0])+".txt")
             if bool==False:
                 sc=SparkContext(conf=conf)
                 ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
                 rdd=sc.union(ex).persist()
-                ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+                ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0][0])
                 sc.stop()
                 print("-------------next--------------------")
                 list_tmp=[]
@@ -669,12 +689,12 @@ for i in list(cz_FQW):
             num=num+1
 
 print("last done：")#处理最后一组
-bool=fs_pyhdfs.exists("/rezult/"+"ekf"+str(list_tmp[0])+".txt")
+bool=fs_pyhdfs.exists("/rezult/"+"ekf"+str(list_tmp[0][0])+".txt")
 if bool==False:
     sc=SparkContext(conf=conf)
     ex=sex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
     rdd=sc.union(ex).persist()
-    ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0])
+    ekf_model_start_inference(sc,args,spark_work,rdd,name=list_tmp[0][0])
     sc.stop()
 print("ekf all over")
 
