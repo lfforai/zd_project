@@ -409,7 +409,7 @@ for i in list(cz_FQW):
             num=num+1
 
 print("last done：")#处理最后一组
-bool=fs_pyhdfs.exists("/rezult/"+"AR"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+bool=fs_pyhdfs.exists("/rezult/"+"AR_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
 if bool==False:
     sc=SparkContext(conf=conf)
     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
