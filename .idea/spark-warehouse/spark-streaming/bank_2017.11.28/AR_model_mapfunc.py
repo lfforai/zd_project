@@ -116,13 +116,13 @@ def map_func_AR(args, ctx):
                     #        print("last batch_size,change step_each_batch:d%,batch_size:d%",(step_each_batch,batch_size))
                     if i>args.steps-2:
                         step_each_batch=1#每次迭代次数
-                        batch_size_ex=10#每次迭代的批处数
+                        batch_size_ex=100#每次迭代的批处数
                         print("change===============:")
                     data = {
                         tf.contrib.timeseries.TrainEvalFeatures.TIMES:batch_xs,
                         tf.contrib.timeseries.TrainEvalFeatures.VALUES:batch_ys,
                     }
-                    if(batch_ys.__len__()<25):
+                    if(batch_ys.__len__()<40):
                        break
                     if marknum==0 or num!=p_num:
                         # logdir = TFNode.hdfs_path(ctx,str("model/")+args.model+str("_{0}").format(num))
@@ -132,11 +132,11 @@ def map_func_AR(args, ctx):
                         p_num=num
                         print("logdir================:",logdir)
                     ar = tf.contrib.timeseries.ARRegressor(
-                        periodicities=200, input_window_size=15, output_window_size=10,
+                        periodicities=200, input_window_size=30, output_window_size=10,
                         num_features=1,
                         loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                     reader = NumpyReader(data)
-                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=batch_size_ex, window_size=25)
+                    train_input_fn = tf.contrib.timeseries.RandomWindowInputFn(reader, batch_size=batch_size_ex, window_size=40)
                     ar.train(input_fn=train_input_fn, steps=step_each_batch)
                     i=i+1
                     # time.sleep((worker_num + 1) * 5)
@@ -160,7 +160,7 @@ def map_func_AR(args, ctx):
                         p_num=num
                     results=[]
                     len=batch_ys.__len__()
-                    if(len<25):
+                    if(len<40):
                         if len!=0:
                            results.extend([["o","o"]]*len)
                            tf_feed.batch_results(results)
@@ -170,7 +170,7 @@ def map_func_AR(args, ctx):
                            print("0=")
                     else:
                         ar = tf.contrib.timeseries.ARRegressor(
-                            periodicities=200, input_window_size=15, output_window_size=10,
+                            periodicities=200, input_window_size=30, output_window_size=10,
                             num_features=1,
                             loss=tf.contrib.timeseries.ARModel.NORMAL_LIKELIHOOD_LOSS,model_dir=logdir)
                         reader_N = NumpyReader(data)

@@ -221,7 +221,7 @@ def map_func_KDE(args, ctx):
                                 batch_ys_ok=numpy.array(list(filter(lambda x:(x<avg_value+2*std_value and x>avg_value-2*std_value)
                                                                     and (x>-500 and x<500)
                                                                     ,batch_ys)))
-                                if batch_ys_ok.__len__() >0:
+                                if batch_ys_ok is not None:
                                     max=numpy.max(batch_ys_ok)
                                     min=numpy.min(batch_ys_ok)
                                     pitch_kde=numpy.abs(max-min)/5000

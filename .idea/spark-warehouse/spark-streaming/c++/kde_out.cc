@@ -125,9 +125,9 @@ class KdeOutOp : public OpKernel {
 		   else{
 			  if(value_now>last_value)//只计算减少的概率部分
 			  { dis_length=value_now-last_value;//两个区间之间的长度
-			   if ((float)dis_length/dx<500.0){
-							  			    	dx=dis_length/500;
-							  			    	n=500;
+			   if ((float)dis_length/dx<1000.0){
+							  			    	dx=dis_length/1000;
+							  			    	n=1000;
 							  	   }//dx就要
 				else
 				{n=int(dis_length/dx);}
@@ -148,9 +148,9 @@ class KdeOutOp : public OpKernel {
 			  else{
 				  if(value_now<last_value)//只计算增加的概率部分
 				  { dis_length=last_value-value_now;//两个区间之间的长度
-				    if ((float)dis_length/dx<500.0){
-				  			    	dx=dis_length/500;
-				  			    	n=500;
+				    if ((float)dis_length/dx<1000.0){
+				  			    	dx=dis_length/1000;
+				  			    	n=1000;
 				  	   }//dx就要
 				  	  else
 				      {n=int(dis_length/dx);}

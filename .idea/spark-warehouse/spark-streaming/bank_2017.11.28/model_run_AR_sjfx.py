@@ -60,8 +60,8 @@ args = parser.parse_args()
 
 
 #基础参数配置
-if＿AR_model_train=1
-if_AR_mode_inference=1
+if＿AR_model_train=0
+if_AR_mode_inference=0
 if_efk_mode_train=0
 if_efk_mode_inference=0
 
