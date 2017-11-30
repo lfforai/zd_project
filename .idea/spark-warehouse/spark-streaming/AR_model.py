@@ -60,7 +60,6 @@ def main(_):
     plt.legend(loc=4)
     plt.savefig('predict_result.jpg')
 
-
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
 tf.app.run()
