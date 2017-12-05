@@ -212,12 +212,16 @@ def map_func_cluster(args, ctx):
                 # Add ops to save and restore all the variables
                 i_n=0
                 k=2
-                limit=0.3
+                limit=0.2
                 list_length_first=0
                 while not tf_feed.should_stop():
                     results=[]#有问题的选项直接输出
                     print("------------------第"+str(i_n+1)+"次 ekf—batch inference-----------------------")
-                    xs_info,batch_ys = feed_dict_fence2(tf_feed.next_batch(batch_size))
+                    xs_info,batch_ys = feed_dict_fence(tf_feed.next_batch(batch_size))
+                    for jj in range(batch_ys.__len__()):
+                        print(xs_info[jj])
+                        print(batch_ys[jj])
+                        print("------------")
                     # print(xs_info,xs_info[0])
                     if (i_n==0):
                        list_length=batch_ys.__len__()
@@ -233,14 +237,17 @@ def map_func_cluster(args, ctx):
                             #在聚类前先剔除距离中心距离３倍标准差以外的异常距离点
                             # print(batch_ys)
                             center_befor=np.mean(batch_ys)
+                            print("中心点：＝==", center_befor)
                             #计算到中心点距离
                             Radius_befor=np.sqrt(np.sum(np.power(batch_ys-center_befor,2),axis=1))
                             from numpy import std
                             std_value=std(Radius_befor)
                             avg_value=numpy.average(Radius_befor)
                             out_value=avg_value+3*std_value#超出部分视为异常值不参与聚类
+                            print("3倍方差以外距离：＝", out_value)
                             org=zip(xs_info,batch_ys)
                             together=zip(Radius_befor,org)
+
 
                             #保留三倍标标准差之内的点
                             batch_ys_info=[[e[1][0],e[1][1]] for e in\
@@ -248,12 +255,16 @@ def map_func_cluster(args, ctx):
                             xs_info=list(map(lambda x:x[0],batch_ys_info))
                             batch_ys=numpy.array(list(map(lambda x:x[1],batch_ys_info)))
 
+
                             #剔除三倍标标准差之外的点
                             batch_ys_info=[[e[1][0],e[1][1]] for e in \
                                            list(filter(lambda x:float(x[0])>=out_value,together))]
                             xs_info_out=list(map(lambda x:x[0],batch_ys_info))
                             #batch_ys_out=np.asarray(list(map(lambda x:float(x[1]),batch_ys_info)))
-
+                            for jj in range(batch_ys.__len__()):
+                                print(xs_info[jj])
+                                print(batch_ys[jj])
+                                print("------------")
                             center,result=KMeansCluster(batch_ys,k);
                             print("已经完成聚类计算")
                             print("center:=",center)

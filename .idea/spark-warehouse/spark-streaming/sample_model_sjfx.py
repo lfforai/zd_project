@@ -202,7 +202,7 @@ def cluster_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fract
                        a=i.split(",")
                        value.append(str(a[0]))
                        value.append(float(a[1]))
-                       j=0
+                       j=1
                     else:
                        if j==0:
                           value=[]
@@ -359,7 +359,7 @@ def cluster_FFT_file_to_rdd2(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,
                         a=i.split(",")
                         value.append(str(a[0]))
                         value.append(float(a[1]))
-                        j=0
+                        j=1
                     else:
                         if j==0:
                             value=[]

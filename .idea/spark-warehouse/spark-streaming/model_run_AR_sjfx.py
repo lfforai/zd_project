@@ -786,12 +786,19 @@ if if_cluster_mode_inference==1:
             num=num+1
         else:
             if num%spark_work==0:
-                bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+                bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                      +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                      "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                      "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
-                    ex=sample_model_sjfx.cluster_FFT_file_to_rdd2(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=500,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=50)
+                    ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
                     rdd=sc.union(ex).persist()
-                    cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+                    cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                                                                 +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                                                                 "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                                                                 "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
+                                                                                 )
                     sc.stop()
                     print("---------------next--------------------")
                     list_tmp=[]
@@ -811,9 +818,13 @@ if if_cluster_mode_inference==1:
     bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
-        ex=sex=sample_model_sjfx.cluster_FFT_file_to_rdd2(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=500,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=50)
+        ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
         rdd=sc.union(ex).persist()
-        cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+        cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                                                  +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                                                  "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                                                  "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
+                                      )
         sc.stop()
     print("cluster all over")
 
