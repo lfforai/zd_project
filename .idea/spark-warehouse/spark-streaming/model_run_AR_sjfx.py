@@ -61,10 +61,11 @@ args = parser.parse_args()
 
 
 #基础参数配置
-if＿AR_model_train=1
-if_AR_mode_inference=1
+if＿AR_model_train=0
+if_AR_mode_inference=0
 if_efk_mode_train=0
 if_efk_mode_inference=0
+if_cluster_mode_inference=1
 
 print("----------------AR  开始-------------------------------------")
 #二、数据样本抽样
@@ -712,6 +713,7 @@ if if_efk_mode_inference==1:
 
 
 ##############用聚类方法剔除绑点错误:
+print("-----------------------cluster---start---------------")
 def cluster_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     global client_N
     #['G_LYXGF', 'Q', 'G_LYXGF_1_315NQ001.S.txt|G_LYXGF_1_315NQ002.S.txt|G_LYXGF_1_316NQ001.S.txt|G_LYXGF_1_316NQ002.S.txt|G_LYXGF_1_317NQ001.S.txt|G_LYXGF_1_317NQ002.S.txt'
@@ -719,7 +721,7 @@ def cluster_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     num_ps = 0
 
     #依次对每个站点的每个原地带入模型进行结果测算
-    print("----------------ekf-inference start--------------------------")
+    print("----------------cluster-inference start--------------------------")
     #对所有测点进行一次遍历
     def func_count(num,iter):
         j=0
@@ -733,41 +735,26 @@ def cluster_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     if min_l==0 and max_l==0:#不需要继续进行95%和5%分位点进行搜索
         pass
     else:
-        each_length=sorted(list(each_length))
-        for i_sort in range(each_length.__len__()):#查找最小minl非0值
-            if each_length[i_sort] ==0:
-                pass
-            else:
-                min_l=each_length[i_sort]
-                break
-        if(max_l<min_l*1.5):
-            if max_l>40000:
-                args.batch_size=int(numpy.average(each_length)/4)
-                #int(numpy.average(each_length)/3)
-            else:
-                args.batch_size=max_l
-        else:
-            if min_l>40000:
-                args.batch_size=min_l/2
-            else:
-                args.batch_size=40000
+        args.batch_size=max_l
                 #20000
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     args.mode='inference'
-    args.model="ekf"
-    cluster_AR_inference = TFCluster.run(sc, Clustering_model_mapfunc.map_func_ekf, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    args.model="cluster"
+    args.steps=2
+    cluster_AR_inference = TFCluster.run(sc, Clustering_model_mapfunc.map_func_cluster, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster_AR_inference.inference(dataRDD)
-    labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o')).persist()
-    def func_m(partitionIndex,iter):
-        num=0
-        rezult=[]
-        for i in iter:
-            if num<10:
-                rezult.append(["part:="+str(partitionIndex),i])
-            num=num+1
-        return rezult
-    print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
+    labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o'))
+    labelRDD1.saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"cluster_"+str(name)+".txt")
+    # def func_m(partitionIndex,iter):
+    #     num=0
+    #     rezult=[]
+    #     for i in iter:
+    #         if num<10:
+    #             rezult.append(["part:="+str(partitionIndex),i])
+    #         num=num+1
+    #     return rezult
+    # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     # def func_m(partitionIndex,iter):
     #     num=0
     #     rezult=[]
@@ -782,79 +769,31 @@ def cluster_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     #['G_CFYH|W', -1173.0488, 876.0, -2049.0488, 'G_CFYH_1_002FW001|2016-5-13 7:47:38.359000']
     cluster_AR_inference.shutdown()
     # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
-    # .saveAsTextFile(args.output)
-    print("----------------ekf-inference over--------------------------")
+    print("----------------cluster-inference over--------------------------")
 
-    print("----------------KDE-inference start------------------------")
-    def func_count(num,iter):
-        j=0
-        for i in iter:
-            j=j+1
-        return [j]
-    each_length=labelRDD1.mapPartitionsWithIndex(func_count).collect()
-    print("每个partion的大小：===============", each_length)
-    min_l=min(each_length)
-    max_l=max(each_length)
-    if min_l==0 and max_l==0:#不需要继续进行95%和5%分位点进行搜索
-        pass
-    else:
-        each_length=sorted(list(each_length))
-        for i_sort in range(each_length.__len__()):#查找最小minl非0值
-            if each_length[i_sort] ==0:
-                pass
-            else:
-                min_l=each_length[i_sort]
-                break
-        if(max_l<min_l*1.5):
-            if max_l>40000:
-                args.batch_size=int(numpy.average(each_length)/4)
-            else:
-                args.batch_size=max_l
-        else:
-            if min_l>40000:
-                args.batch_size=min_l/2
-            else:
-                args.batch_size=40000
-    print("args.batch_size=========================",args.batch_size)
-    args.epochs=1
-    args.mode='inference'
-    args.model='KDE'
-    cluster_KDE = TFCluster.run(sc,KDE_model_mapfunc.map_func_KDE, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
-    # if args.mode == "train":
-    # labelRDD2=
-    labelRDD3=cluster_KDE.inference(labelRDD1, args.epochs)
-    labelRDD4=labelRDD3.filter(lambda x:not str(x[0]).__eq__('o')).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf_"+str(name)+".txt")
-    # # print("labelRDD3:======",labelRDD4.take(100))
-    # def func_m(partitionIndex,iter):
-    #     num=0
-    #     rezult=[]
-    #     for i in iter:
-    #         if num<100:
-    #             rezult.append(["part:="+str(partitionIndex),i])
-    #         num=num+1
-    #     return rezult
-    # print("结果：==========================",labelRDD3.mapPartitionsWithIndex(func_m).collect())
-    cluster_KDE.shutdown()
-    print("----------------KDE-inference over--------------------------")
-    print("{0} ===== Stop".format(datetime.now().isoformat()))
+num=0
+list_tmp=[]
 
 if if_cluster_mode_inference==1:
     for i in list(cz_FQW):
         # if times==1:
         #     break
+        print("i===========",i)
+        #i=========== ['G_ZDBY_0$', 'W', 'G_ZDBY_1_117NW001.1.txt|G_ZDBY_1_117NW002.1.txt|G_ZDBY_1_118NW001.1.txt|G_ZDBY_1_118NW002.1.txt|G_ZDBY_2_235NW001.1.txt|G_ZDBY_2_235NW002.1.txt|G_ZDBY_2_236NW001.1.txt|G_ZDBY_2_236NW002.1.txt', 593.0]
+
         if num==0:
             list_tmp.append(i)
             num=num+1
         else:
             if num%spark_work==0:
-                bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+                bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
-                    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+                    ex=sample_model_sjfx.cluster_FFT_file_to_rdd2(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=500,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=50)
                     rdd=sc.union(ex).persist()
-                    ekf_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+                    cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
                     sc.stop()
-                    print("-------------next--------------------")
+                    print("---------------next--------------------")
                     list_tmp=[]
                     num=num+1
                     list_tmp.append(i)
@@ -869,16 +808,14 @@ if if_cluster_mode_inference==1:
                 num=num+1
 
     print("last done：")#处理最后一组
-    bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+    bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
-        ex=sex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+        ex=sex=sample_model_sjfx.cluster_FFT_file_to_rdd2(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=500,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=50)
         rdd=sc.union(ex).persist()
-        ekf_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+        cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
         sc.stop()
-    print("ekf all over")
-
-
+    print("cluster all over")
 
 #3.数据汇总
 schema = StructType([
@@ -900,7 +837,6 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/A*").distinct().map(lambda x:str(x).split(",")). \
     map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
 rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_AR.txt")
-
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

@@ -97,10 +97,11 @@ def delete_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",recurs
 
 #×××××××××××××××××××××××××××××文件目录××××××××××××××××××××××××××××××
 #文件或者目录删除
-deletefilename="/rezult/AR_G_CFYH|Q.txt"
+deletefilename="/rezult/cluster_G_ZDBY_0$|W.txt"
     #"/rezult/AR['G_ZDBY', 'Q', 'G_ZDBY_1_117NQ001.D.txt|G_ZDBY_1_117NQ002.D.txt|G_ZDBY_1_118NQ001.D.txt|G_ZDBY_1_118NQ002.D.txt|G_ZDBY_2_235NQ001.D.txt|G_ZDBY_2_235NQ002.D.txt|G_ZDBY_2_236NQ001.D.txt|G_ZDBY_2_236NQ002.D.txt', 604.0].txt"
     #"/user/root/model"
     #"/rezult"
+
 #目录上传
 local_to_hdfs_dirnames="AR['G_CFYH', 'Q', 'G_CFYH_1_002FQ001.txt|G_CFYH_1_003FQ001.txt|G_CFYH_1_004FQ001.txt|G_CFYH_1_005FQ001.txt|G_CFYH_2_060FQ001.txt|G_CFYH_2_061FQ001.txt|G_CFYH_2_062FQ001.txt', 8544.0]_500.txt" #文件夹上传
 

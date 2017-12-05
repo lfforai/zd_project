@@ -150,7 +150,7 @@ def KMeansCluster(vectors, noofclusters):
         return centroids, assignments
 
 ############生成测试数据###############
-sampleNo = 10;#数据数量
+sampleNo = 100;#数据数量
 mu =3
 # 二维正态分布
 mu = np.array([[1, 5]])
@@ -162,8 +162,51 @@ srcdata=np.dot(np.random.randn(sampleNo, 2), R) + mu
 ############kmeans算法计算###############
 k=4
 center,result=KMeansCluster(srcdata,k)
-print(center)
-print("result",result)
+
+mark=["a"]*result.__len__()
+
+list_centers=[]
+for i in result:
+    list_centers.append(center[i])
+
+Radius=np.sqrt(np.sum(np.power(srcdata-list_centers,2),axis=1))
+
+ave_Radius=[[i,0,0,0] for i in range(k)]#计算平均半径[类类名字,半径平均值,类中样本个数,标准差]
+
+# 计算均值和样本个数
+for i in range(result.__len__()):
+    ave_Radius[result[i]][1]=ave_Radius[result[i]][1]+Radius[i]
+    ave_Radius[result[i]][2]=ave_Radius[result[i]][2]+1
+
+ave_Radius=np.array(list(map(lambda x:[x[0],x[1]/x[2],x[2],x[3]],ave_Radius)))
+print("aa:==",ave_Radius)
+print("000000000000000000000000")
+
+#计算标准差
+for i in range(result.__len__()):
+    ave_Radius[result[i]][3]=ave_Radius[result[i]][3]+np.power(ave_Radius[result[i]][1]-Radius[i],2)
+
+for i in range(k):
+    if ave_Radius[i][2]!=1:
+       ave_Radius[i][3]=np.sqrt(ave_Radius[i][3]/(ave_Radius[i][2]-1))
+    else:
+       ave_Radius[i][3]=0
+
+# print(ave_Radius)
+# print(ave_Radius_out)
+#
+ave_Radius_out=[[i[1]+2*i[3]]  for i in ave_Radius]
+list_rad_out=[]
+for i in result:
+    list_rad_out.append(ave_Radius_out[i])
+
+last=[[e,l[0],l[1][0]] for e,l in zip(mark,zip(Radius, list_rad_out))]
+last_n=list(map(lambda x:[x[0],1] if x[1]>x[2] else [x[0],0],last))
+print(last_n)
+print(last_n.__len__())
+
+print("----------------------------")
+
 ############利用seaborn画图###############
 print(dict(zip([1,2,3,4,5],["c1","c2","c3","c4","c5"])))
 
