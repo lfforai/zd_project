@@ -407,6 +407,82 @@ def cluster_FFT_file_to_rdd2(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,
         exit()
     return  all_rdd_list
 
+#FFT的数据做相似度检验
+def cluster_FFT_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fractions=0.50,max_sample_length=100,hdfs_addr="hdfs://sjfx1:9000",pitch_length=100):
+
+    def rdd_sample(ep_len,max_length,pitch_len):#max_lengt每个partition抽取的个数
+        import numpy as np
+        import random
+        from numpy import std
+        #预先剔除2倍标准差以外的数据
+        #在每个rdd的每个partition中按fractions的比例进行样本抽样
+        #抽样比例：fractions,每个partiton的预估比例ep_len
+        #时序模型需要，抽取连续的区间
+        def map_func(iter):
+            length=pitch_len*max_length#总抽样长度
+            start_point=int((ep_len-length-1)*np.random.random())
+            result=[]
+            value=[]
+            num=0
+            j=0#pitch循环用
+            for i in iter:
+                if num>start_point and num<start_point+length+1:
+                    if j%pitch_len==0 and j!=0:
+                        one=np.array(value[1:value.__len__()])
+                        vlaue_fft=np.fft.fft(one)
+                        fft_value=np.sum(vlaue_fft[0:3]*[0.6,0.3,0.1])##取前面３个主要比重
+                        result.append([value[0],fft_value.real,fft_value.imag])
+                        value=[]
+                        a=i.split(",")
+                        value.append(str(a[0]))
+                        value.append(float(a[1]))
+                        j=0
+                    else:
+                        if j==0:
+                            value=[]
+                            a=i.split(",")
+                            value.append(str(a[0]))
+                            value.append(float(a[1]))
+                            j=j+1
+                        else:
+                            a=i.split(",")
+                            value.append(float(a[1]))
+                            j=j+1
+                num=num+1
+            return result
+        return map_func
+
+    yd_num=list(filelist).__len__()
+    print("本次处理点个数：=",yd_num)
+    all_rdd_list=[]#所有点的list集合
+    if(yd_num==work_num):#需要拟合的点数量正好等于work数量
+        for i in filelist:
+            cz_name=i[0]#厂站名字
+            eq_type=i[1]#原点种类 F功率 Q电量 S风速
+            file_length=float(i[3])
+            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            # print(filename_list)
+            cz_rdd_list=[]#每个厂+Q，W，F
+            sum_count=0
+            for j in filename_list:
+                #每个原点按照比例进行抽样
+                rdd_tmp=sc.textFile(j)
+                partitions_num=rdd_tmp.getNumPartitions()
+                total_count=rdd_tmp.count()
+                # sum_count=sum_count+total_count
+                each_max_limit=max_sample_length/partitions_num
+                eachpartitions_len=int(total_count/partitions_num*0.9)
+                if  each_max_limit*pitch_length>eachpartitions_len:
+                    print("每次抽样的样本总数需求不能大于ｒｄｄ的partition长度")
+                    exit()
+                rdd_tmp=rdd_tmp.mapPartitions(rdd_sample(eachpartitions_len,each_max_limit,pitch_length))#进行抽样,partition的顺序会被打乱,但是每个partition内部顺序不动
+                # print("list':=",rdd_tmp.take(1))
+                cz_rdd_list.append(rdd_tmp)
+            all_rdd_list.append(sc.union(cz_rdd_list).repartition(1))
+    else:
+        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
+        exit()
+    return  all_rdd_list
 
 #厂站-QSW _数据集训练
 # def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
