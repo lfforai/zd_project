@@ -55,7 +55,7 @@ def corrcoef(x,y):
     return num/den
 
 #在一个ｒｄｄ中提取一段连续长短的数据
-def rdd_catch_pitch(sc,filename,length=100000,start_point=-1,time_point="#"):
+def rdd_catch_pitch(sc,filename,length=200000,start_point=-1,time_point="#"):
     import numpy as np
 
     rdd=sc.textFile(filename)
@@ -101,6 +101,7 @@ def rdd_catch_pitch(sc,filename,length=100000,start_point=-1,time_point="#"):
     if  start_point!=-1:
         a=rdd.filter(lambda x:x[0]==start_point).collect()
         time_point=str(a[0][1]).split(",")[2]
+        print("start_point:=",start_point)
     else:
         pattern = re.compile(r'(.*)\.([0-9]+)')
         m = pattern.match(time_point)
@@ -122,7 +123,7 @@ def rdd_catch_pitch(sc,filename,length=100000,start_point=-1,time_point="#"):
           return map_func
         a=rdd.mapPartitions(time_func(time_n)).collect()
         start_point=int(a[0][0])
-        print(start_point)
+        print("start_point:=",start_point)
 
     # 开始采样点
     rdd=rdd.filter(lambda x:x[0]>=start_point and x[0]<start_point+length).\
@@ -146,13 +147,13 @@ def rdd_catch_pitch(sc,filename,length=100000,start_point=-1,time_point="#"):
     sc.stop
     return result,time_point
 
-rdd0,time_N=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_001FW001.txt",start_point=-1,time_point="2015-11-7 10:56:21.000000"))
-rdd1,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_002FW001.txt",start_point=-1,time_point=time_N))
-rdd2,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_003FW001.txt",start_point=-1,time_point=time_N))
-rdd3,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_001FW001_QQ.txt",start_point=-1,time_point=time_N))
-rdd4,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_063FW001.txt",start_point=-1,time_point=time_N))
-rdd5,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FW/G_CFMY_1_064FW001.txt",start_point=-1,ttime_point=time_N))
-#rdd6=numpy.asarray(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FS/G_CFYH_2_062FS001.txt",1000))
+rdd0,time_N=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_1_002FQ001.txt",start_point=50000,time_point="#"))
+rdd1,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_1_003FQ001.txt",start_point=-1,time_point=time_N))
+rdd2,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_1_004FQ001.txt",start_point=-1,time_point=time_N))
+rdd3,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_1_004FQ001_WW.txt",start_point=-1,time_point=time_N))
+rdd4,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_2_060FQ001.txt",start_point=-1,time_point=time_N))
+rdd5,_=numpy.array(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_2_061FQ001.txt",start_point=-1,time_point=time_N))
+# rdd6=numpy.asarray(rdd_catch_pitch(sc,"hdfs://sjfx1:9000/zd_data11.14/FS/G_CFYH_2_062FS001.txt",1000))
 temp_shape=tf.zeros([1])#传递shape的参数
 
 with tf.Session() as sess:
