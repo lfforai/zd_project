@@ -565,17 +565,12 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                 print("start_point:=",start_point)
 
             # 开始采样点
-            def map_func_N(iter):
-                result=[]
-                for i in iter:
-                    list_value=str((i[1])).split(",")
-                    result.append([i[0],str(list_value[0]),float(list_value[1])])
-                return result
+            def map_func_N(x):
+                list_value=str((x[1])).split(",")
+                return  [x[0],str(list_value[0]),float(list_value[1])]
 
             rdd=rdd.filter(lambda x:x[0]>=start_point and x[0]<start_point+length)
-            print(rdd.take(10))
             rdd=rdd.map(map_func_N).persist()
-            print(rdd.take(10))
             return rdd,time_point
 
         yd_num=list(filelist).__len__()
@@ -601,7 +596,6 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                       cz_rdd_list.append(rdd_tmp)
                       sum_count=sum_count+1
                 all_rdd_list.append(sc.union(cz_rdd_list).repartition(1).sortBy(lambda x:[x[1],x[0]]).map(lambda x:[x[1],x[2]]))
-                print("ge dian =",i)
         else:
             print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
             exit()

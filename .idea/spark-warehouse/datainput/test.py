@@ -27,6 +27,7 @@
 #
 
 import re
+import numpy as np
 
 line = "2015-11-7 10:56:21.000000"
 pattern = re.compile(r'(.*)\.([0-9]+)')
@@ -38,3 +39,6 @@ if m:
 import time
 print(time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S')))
 print(time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S')))
+w=np.zeros([2,2])
+w[1][1]=1
+print(w)

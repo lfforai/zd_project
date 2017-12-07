@@ -16,6 +16,7 @@ import AR_model_mapfunc
 import KDE_model_mapfunc
 import ekf_model_mapfunc
 import Clustering_model_mapfunc
+import spearman_ttf_model_mapfunc
 
 from tensorflowonspark import TFCluster
 import pyspark.sql as sql_n       #spark.sql
@@ -779,7 +780,7 @@ def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     num_ps = 0
 
     #依次对每个站点的每个原地带入模型进行结果测算
-    print("----------------cluster-inference start--------------------------")
+    print("----------------spearman-inference start--------------------------")
     #对所有测点进行一次遍历
     def func_count(num,iter):
         j=0
@@ -798,12 +799,12 @@ def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     print("args.batch_size=========================",args.batch_size)
     args.epochs=1
     args.mode='inference'
-    args.model="cluster"
+    args.model="spearman"
     args.steps=2
-    cluster_AR_inference = TFCluster.run(sc, Clustering_model_mapfunc.map_func_cluster, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    cluster_AR_inference = TFCluster.run(sc, spearman_ttf_model_mapfunc.map_func, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
     labelRDD = cluster_AR_inference.inference(dataRDD)
     labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o'))
-    labelRDD1.saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"cluster_"+str(name)+".txt")
+    labelRDD1.saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"spearman_"+str(name)+".txt")
     # def func_m(partitionIndex,iter):
     #     num=0
     #     rezult=[]
@@ -827,7 +828,7 @@ def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     #['G_CFYH|W', -1173.0488, 876.0, -2049.0488, 'G_CFYH_1_002FW001|2016-5-13 7:47:38.359000']
     cluster_AR_inference.shutdown()
     # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
-    print("----------------cluster-inference over--------------------------")
+    print("----------------spearman-inference over--------------------------")
 
 
 num=0
@@ -845,7 +846,7 @@ if if_cluster_mode_inference==1:
             num=num+1
         else:
             if num%spark_work==0:
-                bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                       +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                       "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                       "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
@@ -855,13 +856,11 @@ if if_cluster_mode_inference==1:
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                  filelist=list_tmp,work_num=4,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=10000,
+                                                 ,start_point=50000,
                                                  time_point="#",
-                                                 pitch_length=20000)
+                                                 pitch_length=100000)
 
                     rdd=sc.union(ex).persist()
-                    print("开始------------------------------")
-                    print(rdd.take(10))
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                                  +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                                                                  "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
@@ -883,7 +882,7 @@ if if_cluster_mode_inference==1:
                 num=num+1
 
     print("last done：")#处理最后一组
-    bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+    bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
         #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
@@ -900,7 +899,7 @@ if if_cluster_mode_inference==1:
                                                                   "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
                                       )
         sc.stop()
-    print("cluster all over")
+    print("spearman all over")
 
 #3.数据汇总
 schema = StructType([

@@ -16,7 +16,7 @@ def get_available_gpus_len():
     local_device_protos = _device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU'].__len__()
 
-def map_func_cluster(args, ctx):
+def map_func(args, ctx):
     from tensorflowonspark import TFNode
     from datetime import datetime
     import math
@@ -159,233 +159,59 @@ def map_func_cluster(args, ctx):
             return centroids, assignments
     ############生成测试数据###############
 
+
     ############kmeans算法计算###############
     def feed_dict_fence(batch):
         # Convert from [(images, labels)] to two numpy arrays of the proper type
-        list_xs_1=[]
         partitionnum=0
-        y = []
+        ys = []
         i=0
+        each_y_value=[]#每个组里面一个是一个源点的样本
+        info=""
         for item in batch:
-            # print(item)
-            y.append([item[1],item[2]])
-            list_xs_1.append(item[0])
-        ys = numpy.array(y)
-        ys = ys.astype(numpy.float64)
-        return list_xs_1,ys #ys={平均值,标准差}
-
-        ############kmeans算法计算###############
-    def feed_dict_fence2(batch):
-        # Convert from [(images, labels)] to two numpy arrays of the proper type
-        list_xs_1=[]
-        partitionnum=0
-        y = []
-        i=0
-        for item in batch:
-            # print(item)
-            y.append(item[1])
-            list_xs_1.append(item[0])
-        ys = numpy.array(y)
-        ys = ys.astype(numpy.float64)
-        return list_xs_1,ys #ys={平均值,标准差}
+            if i==0:
+               info=item[0]#源点名字
+               each_y_value.append(item[1])#源点数据
+               i=i+1
+            else:
+               if(str(info).__eq__(item[0])):
+                  each_y_value.append(item[1])
+               else:
+                  ys.append([info,each_y_value])
+                  each_y_value=[]
+                  info=item[0]#源点名
+                  each_y_value.append(item[1])#源点数据
+        return ys #[原点名字，list[数据]]
 
     if job_name == "ps":
        server.join()
     elif job_name == "worker":
         #print("tensorflow model path: {0}".format(logdir))
         tf_feed = TFNode.DataFeed(ctx.mgr, args.mode == "train")
-
-        if(get_available_gpus_len()==0):
-            gpu_num="/cpu:0"
-        else:
-            gpu_num="/gpu:{0}".format(int(ctx.task_index%get_available_gpus_len()))
-
-        print("gpu:=====================",gpu_num)
-        logdir=''
-        marknum=0
-        p_num=0
         # #按gpu个数分发
         with tf.device("/cpu:0"):
             if(args.mode=="train"):
                 tf_feed.terminate()
             else:#测试"inference"
-                # Add ops to save and restore all the variables
                 i_n=0
-                k=2
-                limit=0.2
-                list_length_first=0
                 while not tf_feed.should_stop():
                     results=[]#有问题的选项直接输出
-                    print("------------------第"+str(i_n+1)+"次 ekf—batch inference-----------------------")
-                    xs_info,batch_ys = feed_dict_fence(tf_feed.next_batch(batch_size))
-                    for jj in range(batch_ys.__len__()):
-                        print(xs_info[jj])
-                        print(batch_ys[jj])
-                        print("------------")
-                    # print(xs_info,xs_info[0])
-                    if (i_n==0):
-                       list_length=batch_ys.__len__()
-                       list_length_first=list_length
-                    else:
-                       list_length=batch_ys.__len__()
+                    print("------------------第"+str(i_n+1)+"次 spearman—batch inference-----------------------")
+                    batch_ys = feed_dict_fence(tf_feed.next_batch(batch_size))
+                    list_length_first=batch_ys.__len__()
 
-                    print("length:=========",list_length)
+                    if  list_length_first>0:
+                        info_N=np.zeros([list_length_first,list_length_first])
 
-                    if list_length>0:
-                        step=0
-                        while(step<args.steps):
-                            #在聚类前先剔除距离中心距离３倍标准差以外的异常距离点
-                            # print(batch_ys)
-                            center_befor=np.mean(batch_ys)
-                            print("中心点：＝==", center_befor)
-                            #计算到中心点距离
-                            Radius_befor=np.sqrt(np.sum(np.power(batch_ys-center_befor,2),axis=1))
-                            from numpy import std
-                            std_value=std(Radius_befor)
-                            avg_value=numpy.average(Radius_befor)
-                            out_value=avg_value+3*std_value#超出部分视为异常值不参与聚类
-                            print("3倍方差以外距离：＝", out_value)
-                            org=zip(xs_info,batch_ys)
-                            together=zip(Radius_befor,org)
+                        pearson_out_module = tf.load_op_library('/tensorflow_user_lib/pearson_out.so')
+                        temp_shape=tf.zeros([1])#传递shape的参数
 
+                        with tf.Session() as sess:
+                            for i in range(list_length_first):
+                                for j in range(list_length_first):
+                                    info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape)))
+                                    print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[i][1],info_N[i][j]))
 
-                            #保留三倍标标准差之内的点
-                            batch_ys_info=[[e[1][0],e[1][1]] for e in\
-                                           list(filter(lambda x:float(x[0])<out_value,together))]
-                            xs_info=list(map(lambda x:x[0],batch_ys_info))
-                            batch_ys=numpy.array(list(map(lambda x:x[1],batch_ys_info)))
-
-
-                            #剔除三倍标标准差之外的点
-                            batch_ys_info=[[e[1][0],e[1][1]] for e in \
-                                           list(filter(lambda x:float(x[0])>=out_value,together))]
-                            xs_info_out=list(map(lambda x:x[0],batch_ys_info))
-                            #batch_ys_out=np.asarray(list(map(lambda x:float(x[1]),batch_ys_info)))
-                            for jj in range(batch_ys.__len__()):
-                                print(xs_info[jj])
-                                print(batch_ys[jj])
-                                print("------------")
-                            center,result=KMeansCluster(batch_ys,k);
-                            print("已经完成聚类计算")
-                            print("center:=",center)
-                            #计算样本到每个类中心的半径距离
-                            list_centers=[]
-                            for i in result:
-                                list_centers.append(center[i])
-
-                            Radius=np.sqrt(np.sum(np.power(batch_ys-list_centers,2),axis=1))
-
-                            ave_Radius=[[i,0,0,0] for i in range(k)]#计算平均半径[类类名字,半径平均值,类中样本个数,标准差]
-
-                            # 计算均值和样本个数
-                            for i in range(result.__len__()):
-                                ave_Radius[result[i]][1]=ave_Radius[result[i]][1]+Radius[i]
-                                ave_Radius[result[i]][2]=ave_Radius[result[i]][2]+1
-
-                            ave_Radius=np.array(list(map(lambda x:[x[0],x[1]/x[2],x[2],x[3]],ave_Radius)))
-
-                            #计算标准差
-                            for i in range(result.__len__()):
-                                ave_Radius[result[i]][3]=ave_Radius[result[i]][3]+np.power(ave_Radius[result[i]][1]-Radius[i],2)
-
-                            for i in range(k):
-                                if ave_Radius[i][2]!=1:
-                                    ave_Radius[i][3]=np.sqrt(ave_Radius[i][3]/(ave_Radius[i][2]-1))
-                                else:
-                                    ave_Radius[i][3]=0
-
-                            ave_Radius_out=[[i[1]+3*i[3]]  for i in ave_Radius]
-                            list_rad_out=[]
-                            for i in result:
-                                list_rad_out.append(ave_Radius_out[i])
-
-                            last=[[e,l[0],l[1][0]] for e,l in zip(xs_info,zip(Radius, list_rad_out))]
-                            last_n=list(map(lambda x:x[0],filter(lambda x:True if x[1]==1 else False,map(lambda x:[x[0],1] if x[1]>x[2] else [x[0],0],last))))
-
-                            last_n.extend(xs_info_out)#把异常数据的添加进来,直接作为三倍标准差以外的点
-                            last_set=set(last_n)
-
-                            rezult_list=[]
-                            for item in last_set:
-                                rezult_list.append([item,last_n.count(item)])
-
-                            a_n=[]
-                            for i in rezult_list:
-                                a_n.append(float(i[1]))
-
-                            total=sum(a_n)
-
-                            last_one=[[item[0],float(item[1]/total)] for item in rezult_list]
-                            max_value=0
-
-                            rezult=''
-                            for i in last_one:
-                                if max_value<i[1]:
-                                   max_value=i[1]
-                                   rezult=str(i[0])
-                            print("max:===",max_value)
-                            print("max:rezult===:",rezult)
-                            if(max_value>limit):
-                              results.append(rezult)
-                              temp_list_1=[[e,l[0],l[1]] for e,l in zip(xs_info,batch_ys)]
-                              temp_list_2=list(filter(lambda x:not str(x[0]).__eq__(rezult),temp_list_1))
-                              # for j_j in range(10):
-                              #     print(temp_list_2[j_j])
-                              xs_info_out=list(filter(lambda x:not str(x[0]).__eq__(rezult),xs_info_out))
-                              xs_info=[str(temp_value[0]) for temp_value in temp_list_2]
-                              batch_ys=numpy.array([[float(temp_value[1]),float(temp_value[2])] for temp_value in temp_list_2])
-                              list_length=batch_ys.__len__()
-                              print("list_length:====",list_length)
-                              if list_length<k:
-                                  step=1000
-                                  break
-                              else:
-                                  pass
-                                  # for j in range(batch_ys.__len__()):
-                                  #   print("2=first:==",batch_ys[j])
-                                  #   print("2=secend:==",xs_info[j])
-                            step=step+1
-                            #如果超过半径的类中一类样本的点超过５０％，可以怀疑为异常数据
-                            # statis=[[i,dict()] for i in range(K)]#每一组的统计信息记录
-                            #
-                            # result =[[e,l] for e,l in zip(value,xs_info)] #e:=分的类别,l:=具体的值
-                            #
-                            #统计每个源点在每个分组中出现的次数
-                            # for i in result:
-                            #    if statis[i[0]][1].keys().__contains__(str(i[1])):#已经有了
-                            #       statis[i[0]][1][str(i[1])]=int(statis[i[0]][1][str(i[1])])+1
-                            #    else:
-                            #        statis[i[0]][1][str(i[1])]=1
-
-                            #大于对于每个组中大于占比５０％的分组怀疑是有问题的点，提取出来作为异常点
-                            # for i in range(K):
-                            #     #每一组
-                            #    total_num=0
-                            #
-                            #    for key in statis[i][1].keys():
-                            #        total_num=total_num+statis[i][1][str(key)]#组里面的样本总数
-                            #
-                            #    max_w=0
-                            #    load_key=''
-                            #    for key in statis[i][1].keys():#占比最大的样本类
-                            #        if max_w==0:
-                            #           max_w=float(statis[i][1][str(key)]/total_num)
-                            #           load_key=str(key)
-                            #        else:
-                            #           if max_w<float(statis[i][1][str(key)]/total_num):
-                            #              max_w=float(statis[i][1][str(key)]/total_num)
-                            #              load_key=str(key)
-                            #           else:
-                            #              pass
-                            #
-                            #    print("max_w:={%f},key={%s}"%(max_w,load_key))
-                            #
-                            #    if max_w>limit:
-                            #       result_N =[[e,l] for e,l in zip(batch_ys,xs_info)]
-                            #       print("max_w:={%f},key={%s}"%(max_w,load_key))
-                            #       results=filter(lambda x:str(x[1]).__eq__(load_key),result_N)
-                            #    else:
-                            #       pass
                         num_lack=list_length_first-results.__len__()
                         if num_lack>0:
                             results.extend([["o","o","o"]]*num_lack)
