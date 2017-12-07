@@ -171,7 +171,6 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fracti
        print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
     return  all_rdd_list
 
-
 #用来做聚类使用
 #默认１００个点为一个组
 def cluster_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fractions=0.50,max_sample_length=100,hdfs_addr="hdfs://sjfx1:9000",pitch_length=500):
@@ -483,6 +482,131 @@ def cluster_FFT_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,f
         print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
         exit()
     return  all_rdd_list
+
+
+#FFT和ｓｐｅａｒｍａｎ
+#在一个ｒｄｄ中提取一段连续长短的数据
+def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
+                                 filelist=[],work_num=4,
+                                 hdfs_addr="hdfs://sjfx1:9000"
+                                 ,start_point=50000,
+                                 time_point="#",
+                                 pitch_length=100000):
+
+        def rdd_catch_pitch(sc,filename,length=200000,start_point=-1,time_point="#"):
+            import numpy as np
+            import re
+
+            rdd=sc.textFile(filename)
+
+            count_num=rdd.count()#总长度
+            if length>count_num:
+                print("采样的长度不能大于样本全部长度！")
+                exit()
+
+            def func_count(num,iter):
+                j=0
+                for i in iter:
+                    j=j+1
+                return [j]
+            each_length=list(rdd.mapPartitionsWithIndex(func_count).collect())
+            # print(each_length)
+
+            #每个partion开始编号的地方
+            each_length_N=[]
+            total_num=0;
+            for i in range(each_length.__len__()):
+                if i==0:
+                    each_length_N.append(0)
+                    total_num=each_length[i]
+                else:
+                    each_length_N.append(total_num)
+                    total_num=total_num+each_length[i]
+
+            #开始编码ｉｎｄｅｘ
+            def map_index(each_length_N):
+                def map_func(num,iter):
+                    start=each_length_N[num]
+                    n=0
+                    rezult=[]
+                    for i in iter:
+                        rezult.append([n+start,i])
+                        n=n+1
+                    return rezult
+                return map_func
+            rdd=rdd.mapPartitionsWithIndex(map_index(each_length_N)).persist()
+            # print(rdd.take(10))
+
+            if  start_point!=-1:
+                a=rdd.filter(lambda x:x[0]==start_point).collect()
+                time_point=str(a[0][1]).split(",")[2]
+                print("start_point:=",start_point)
+            else:
+                pattern = re.compile(r'(.*)\.([0-9]+)')
+                m = pattern.match(time_point)
+                time_n=time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S'))
+                def time_func(time_n):
+                    def map_func(iter):
+                        rezult=[]
+                        pattern = re.compile(r'(.*)\.([0-9]+)')
+                        for i in iter:
+                            value=i[1].split(",")
+                            m=pattern.match(str(value[2]))
+                            liunx_time=time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S'))
+                            if liunx_time-time_n>60:
+                                break
+                            if liunx_time-time_n<60 and liunx_time-time_n>=0:
+                                rezult.append(i)
+                                break
+                        return rezult
+                    return map_func
+                a=rdd.mapPartitions(time_func(time_n)).collect()
+                start_point=int(a[0][0])
+                print("start_point:=",start_point)
+
+            # 开始采样点
+            def map_func_N(iter):
+                result=[]
+                for i in iter:
+                    list_value=str((i[1])).split(",")
+                    result.append([i[0],str(list_value[0]),float(list_value[1])])
+                return result
+
+            rdd=rdd.filter(lambda x:x[0]>=start_point and x[0]<start_point+length)
+            print(rdd.take(10))
+            rdd=rdd.map(map_func_N).persist()
+            print(rdd.take(10))
+            return rdd,time_point
+
+        yd_num=list(filelist).__len__()
+        print("本次处理点个数：=",yd_num)
+        all_rdd_list=[]#所有点的list集合
+        if(yd_num==work_num):#需要拟合的点数量正好等于work数量
+            for i in filelist:
+                cz_name=i[0]#厂站名字
+                eq_type=i[1]#原点种类 F功率 Q电量 S风速
+                file_length=float(i[3])
+                filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+                # print(filename_list)
+                cz_rdd_list=[]#每个厂+Q，W，F
+                sum_count=0
+                time_x="#"
+                for j in filename_list:
+                    if(sum_count==0):
+                      rdd_tmp,time_x=rdd_catch_pitch(sc,j,pitch_length,start_point=start_point,time_point=time_point)
+                      cz_rdd_list.append(rdd_tmp)
+                      sum_count=sum_count+1
+                    else:
+                      rdd_tmp,_=rdd_catch_pitch(sc,j,pitch_length,start_point=-1,time_point=time_x)
+                      cz_rdd_list.append(rdd_tmp)
+                      sum_count=sum_count+1
+                all_rdd_list.append(sc.union(cz_rdd_list).repartition(1).sortBy(lambda x:[x[1],x[0]]).map(lambda x:[x[1],x[2]]))
+                print("ge dian =",i)
+        else:
+            print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
+            exit()
+        return  all_rdd_list
+
 
 #厂站-QSW _数据集训练
 # def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):

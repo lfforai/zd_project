@@ -771,6 +771,65 @@ def cluster_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     print("----------------cluster-inference over--------------------------")
 
+
+def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
+    global client_N
+    #['G_LYXGF', 'Q', 'G_LYXGF_1_315NQ001.S.txt|G_LYXGF_1_315NQ002.S.txt|G_LYXGF_1_316NQ001.S.txt|G_LYXGF_1_316NQ002.S.txt|G_LYXGF_1_317NQ001.S.txt|G_LYXGF_1_317NQ002.S.txt'
+    num_executors = spark_worker_num
+    num_ps = 0
+
+    #依次对每个站点的每个原地带入模型进行结果测算
+    print("----------------cluster-inference start--------------------------")
+    #对所有测点进行一次遍历
+    def func_count(num,iter):
+        j=0
+        for i in iter:
+            j=j+1
+        return [j]
+    each_length=dataRDD.mapPartitionsWithIndex(func_count).collect()
+    print("每个partion的大小：===============", each_length)
+    min_l=min(each_length)
+    max_l=max(each_length)
+    if min_l==0 and max_l==0:#不需要继续进行95%和5%分位点进行搜索
+        pass
+    else:
+        args.batch_size=max_l
+        #20000
+    print("args.batch_size=========================",args.batch_size)
+    args.epochs=1
+    args.mode='inference'
+    args.model="cluster"
+    args.steps=2
+    cluster_AR_inference = TFCluster.run(sc, Clustering_model_mapfunc.map_func_cluster, args, args.cluster_size, num_ps, args.tensorboard, TFCluster.InputMode.SPARK)
+    labelRDD = cluster_AR_inference.inference(dataRDD)
+    labelRDD1 = labelRDD.filter(lambda x:not str(x[0]).__eq__('o'))
+    labelRDD1.saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"cluster_"+str(name)+".txt")
+    # def func_m(partitionIndex,iter):
+    #     num=0
+    #     rezult=[]
+    #     for i in iter:
+    #         if num<10:
+    #             rezult.append(["part:="+str(partitionIndex),i])
+    #         num=num+1
+    #     return rezult
+    # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
+    # def func_m(partitionIndex,iter):
+    #     num=0
+    #     rezult=[]
+    #     for i in iter:
+    #         if num<10:
+    #             rezult.append(["part:="+str(partitionIndex),i])
+    #         num=num+1
+    #     return rezult
+    # #剔除差异在-500 和 500以上的明显错误数据
+    # labelRDD1.filter(lambda x:x[3]>500 or x[3]<-500).saveAsTextFile("hdfs://sjfx1:9000/rezult/"+"ekf"+str(name)+"_500"+".txt")
+    # labelRDD1=labelRDD1.filter(lambda x:x[3]<500 and x[3]>-500).persist()
+    #['G_CFYH|W', -1173.0488, 876.0, -2049.0488, 'G_CFYH_1_002FW001|2016-5-13 7:47:38.359000']
+    cluster_AR_inference.shutdown()
+    # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
+    print("----------------cluster-inference over--------------------------")
+
+
 num=0
 list_tmp=[]
 
@@ -792,9 +851,18 @@ if if_cluster_mode_inference==1:
                                       "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
-                    ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+                    #ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+                    ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
+                                                 filelist=list_tmp,work_num=4,
+                                                 hdfs_addr="hdfs://sjfx1:9000"
+                                                 ,start_point=10000,
+                                                 time_point="#",
+                                                 pitch_length=20000)
+
                     rdd=sc.union(ex).persist()
-                    cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                    print("开始------------------------------")
+                    print(rdd.take(10))
+                    spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                                  +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                                                                  "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                                                                  "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
@@ -818,9 +886,15 @@ if if_cluster_mode_inference==1:
     bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
-        ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+        #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+        ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
+                                                          filelist=list_tmp,work_num=4,
+                                                          hdfs_addr="hdfs://sjfx1:9000"
+                                                          ,start_point=50000,
+                                                          time_point="#",
+                                                          pitch_length=100000)
         rdd=sc.union(ex).persist()
-        cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+        spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                                                   "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                                                   "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
