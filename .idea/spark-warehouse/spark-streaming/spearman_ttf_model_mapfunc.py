@@ -163,7 +163,6 @@ def map_func(args, ctx):
     ############kmeans算法计算###############
     def feed_dict_fence(batch):
         # Convert from [(images, labels)] to two numpy arrays of the proper type
-        partitionnum=0
         ys = []
         i=0
         each_y_value=[]#每个组里面一个是一个源点的样本
@@ -182,6 +181,7 @@ def map_func(args, ctx):
                   info=item[0]#源点名
                   each_y_value.append(item[1])#源点数据
             i=i+1
+        ys.append([info,each_y_value])
         return ys,i #[原点名字，list[数据]]
 
     if job_name == "ps":
@@ -200,13 +200,33 @@ def map_func(args, ctx):
                     print("------------------第"+str(i_n+1)+"次 spearman—batch inference-----------------------")
                     batch_ys,total_length=feed_dict_fence(tf_feed.next_batch(batch_size))
                     list_length_first=batch_ys.__len__()
-                    print(" list_length_first:====",list_length_first)
+                    print(" list_length_first_fly:====",list_length_first)
+
+                    for jjj in range(list_length_first):
+                        print(batch_ys[jjj][0])
 
                     if  list_length_first>2:#如果对比的源点数据少于3个无法进行判别
                         info_N=np.zeros([list_length_first,list_length_first])
 
                         pearson_out_module = tf.load_op_library('/tensorflow_user_lib/pearson_out.so')
                         temp_shape=tf.zeros([1])#传递shape的参数
+
+                        def ttf_k(x):#快速tff变换
+                            ttf=[]
+                            rezult=np.fft.fft(x)
+                            for i in [[float(e.real),float(e.imag)] for e in rezult]:
+                                if np.abs(i[0])<0.5:
+                                    ttf.append(0)
+                                else:
+                                    ttf.append(i[0])
+
+                                if np.abs(i[1])<0.5:
+                                    ttf.append(0)
+                                else:
+                                    ttf.append(i[1])
+                            return np.asarray(rezult)
+
+                        batch_ys=[[e[0],ttf_k(e[1])] for e in batch_ys]
 
                         with tf.Session() as sess:
                             for i in range(list_length_first):
@@ -233,9 +253,9 @@ def map_func(args, ctx):
                             for i in range(list_length_first):
                                 mark_list=[]
                                 for j in range(list_length_first):
-                                    if info_order[i][j]>list_length_first-3:
+                                    if info_order[i][j]>list_length_first-4:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>list_length_first*4/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
                             if list_length_first>10:
@@ -243,7 +263,7 @@ def map_func(args, ctx):
                                for j in range(list_length_first):
                                    if info_order[i][j]>list_length_first-1-int(list_length_first*0.20):
                                        mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>list_length_first*4/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                             else:#如果样本点少于等于3个

@@ -846,6 +846,10 @@ if if_cluster_mode_inference==1:
             num=num+1
         else:
             if num%spark_work==0:
+                # print("num:==",num)
+                # for mm  in range(list_tmp.__len__()):
+                #    print(list_tmp[mm])
+                #    print("------------------")
                 bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                       +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                       "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
@@ -856,9 +860,9 @@ if if_cluster_mode_inference==1:
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                  filelist=list_tmp,work_num=4,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=50000,
+                                                 ,start_point=1000,
                                                  time_point="#",
-                                                 pitch_length=100000)
+                                                 pitch_length=20000)
 
                     rdd=sc.union(ex).persist()
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
@@ -889,9 +893,9 @@ if if_cluster_mode_inference==1:
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                           filelist=list_tmp,work_num=4,
                                                           hdfs_addr="hdfs://sjfx1:9000"
-                                                          ,start_point=50000,
+                                                          ,start_point=1000,
                                                           time_point="#",
-                                                          pitch_length=100000)
+                                                          pitch_length=20000)
         rdd=sc.union(ex).persist()
         spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+

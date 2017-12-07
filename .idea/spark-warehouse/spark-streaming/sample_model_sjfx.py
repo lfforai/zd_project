@@ -587,6 +587,7 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                 sum_count=0
                 time_x="#"
                 for j in filename_list:
+                    # print(j)
                     if(sum_count==0):
                       rdd_tmp,time_x=rdd_catch_pitch(sc,j,pitch_length,start_point=start_point,time_point=time_point)
                       cz_rdd_list.append(rdd_tmp)
@@ -595,12 +596,12 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                       rdd_tmp,_=rdd_catch_pitch(sc,j,pitch_length,start_point=-1,time_point=time_x)
                       cz_rdd_list.append(rdd_tmp)
                       sum_count=sum_count+1
+                      # print(rdd_tmp.take(1))
                 all_rdd_list.append(sc.union(cz_rdd_list).repartition(1).sortBy(lambda x:[x[1],x[0]]).map(lambda x:[x[1],x[2]]))
         else:
             print("一次输入的厂站-QFW数量必须和spark的worker数量一致")
             exit()
         return  all_rdd_list
-
 
 #厂站-QSW _数据集训练
 # def inference_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,hdfs_addr="hdfs://sjfx1:9000"):
@@ -696,7 +697,6 @@ def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
     from operator import itemgetter, attrgetter
     return sorted(inference_file_list,key=itemgetter(3))
     #['G_LYXGF', 'G_LYXGF_1_116NW001.1.txt', 0.41437244415283203]
-
 
 #二、############################################################################
 from dateutil import parser
