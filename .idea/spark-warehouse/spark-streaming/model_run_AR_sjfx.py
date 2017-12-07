@@ -860,9 +860,9 @@ if if_cluster_mode_inference==1:
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                  filelist=list_tmp,work_num=4,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=1000,
+                                                 ,start_point=50000,
                                                  time_point="#",
-                                                 pitch_length=20000)
+                                                 pitch_length=200000)
 
                     rdd=sc.union(ex).persist()
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
@@ -893,9 +893,9 @@ if if_cluster_mode_inference==1:
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                           filelist=list_tmp,work_num=4,
                                                           hdfs_addr="hdfs://sjfx1:9000"
-                                                          ,start_point=1000,
+                                                          ,start_point=50000,
                                                           time_point="#",
-                                                          pitch_length=20000)
+                                                          pitch_length=200000)
         rdd=sc.union(ex).persist()
         spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+

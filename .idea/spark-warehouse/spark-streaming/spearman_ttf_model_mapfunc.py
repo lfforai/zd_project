@@ -202,8 +202,8 @@ def map_func(args, ctx):
                     list_length_first=batch_ys.__len__()
                     print(" list_length_first_fly:====",list_length_first)
 
-                    for jjj in range(list_length_first):
-                        print(batch_ys[jjj][0])
+                    # for jjj in range(list_length_first):
+                    #     print(batch_ys[jjj][0])
 
                     if  list_length_first>2:#如果对比的源点数据少于3个无法进行判别
                         info_N=np.zeros([list_length_first,list_length_first])
