@@ -46,6 +46,10 @@ import tensorflow as tf
 from random import choice, shuffle
 from numpy import array
 
-SparkConf
-tmp = [('a',3, 1), ('b',3, 2), ('2',4,3), ('d',2, 4), ('2',1,5)]
-print(sc.parallelize(tmp).sortBy(lambda x: [x[0],x[1]]).collect())
+# SparkConf
+# tmp = [('a',3, 1), ('b',3, 2), ('2',4,3), ('d',2, 4), ('2',1,5)]
+# print(sc.parallelize(tmp).sortBy(lambda x: [x[0],x[1]]).collect())
+
+
+a=numpy.asarray([[1,0,1],[8,9,0]])
+print(max(a[1]))

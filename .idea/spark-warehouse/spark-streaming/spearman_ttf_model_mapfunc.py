@@ -172,16 +172,17 @@ def map_func(args, ctx):
             if i==0:
                info=item[0]#源点名字
                each_y_value.append(item[1])#源点数据
-               i=i+1
             else:
                if(str(info).__eq__(item[0])):
                   each_y_value.append(item[1])
+
                else:
                   ys.append([info,each_y_value])
                   each_y_value=[]
                   info=item[0]#源点名
                   each_y_value.append(item[1])#源点数据
-        return ys #[原点名字，list[数据]]
+            i=i+1
+        return ys,i #[原点名字，list[数据]]
 
     if job_name == "ps":
        server.join()
@@ -197,10 +198,11 @@ def map_func(args, ctx):
                 while not tf_feed.should_stop():
                     results=[]#有问题的选项直接输出
                     print("------------------第"+str(i_n+1)+"次 spearman—batch inference-----------------------")
-                    batch_ys = feed_dict_fence(tf_feed.next_batch(batch_size))
+                    batch_ys,total_length=feed_dict_fence(tf_feed.next_batch(batch_size))
                     list_length_first=batch_ys.__len__()
+                    print(" list_length_first:====",list_length_first)
 
-                    if  list_length_first>0:
+                    if  list_length_first>2:#如果对比的源点数据少于3个无法进行判别
                         info_N=np.zeros([list_length_first,list_length_first])
 
                         pearson_out_module = tf.load_op_library('/tensorflow_user_lib/pearson_out.so')
@@ -209,10 +211,51 @@ def map_func(args, ctx):
                         with tf.Session() as sess:
                             for i in range(list_length_first):
                                 for j in range(list_length_first):
-                                    info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape)))
-                                    print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[i][1],info_N[i][j]))
+                                    if(i!=j):
+                                      info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape)))
+                                      print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_N[i][j]))
 
-                        num_lack=list_length_first-results.__len__()
+                        info_order=np.zeros([list_length_first,list_length_first])#计算相关系数的排序，越小位数越大
+                        for i in range(list_length_first):
+                            for j in range(list_length_first):
+                                index=list_length_first-1
+                                if j==i:
+                                   info_order[i][j]=-1
+                                else:
+                                   for w in range(list_length_first):
+                                       if w!=i:
+                                          info_N[i][j]>info_N[w][j]
+                                          index=index-1
+                                   info_order[i][j]=index
+
+                        #属于异常值的规则
+                        if list_length_first>=4 and list_length_first<=10:
+                            for i in range(list_length_first):
+                                mark_list=[]
+                                for j in range(list_length_first):
+                                    if info_order[i][j]>list_length_first-3:
+                                       mark_list.append(1)#相关性排在倒数1位以内
+                                if sum(mark_list)>list_length_first*4/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                    results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
+                        else:
+                            if list_length_first>10:
+                               mark_list=[]
+                               for j in range(list_length_first):
+                                   if info_order[i][j]>list_length_first-1-int(list_length_first*0.20):
+                                       mark_list.append(1)#相关性排在倒数1位以内
+                               if sum(mark_list)>list_length_first*4/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   results.append(batch_ys[i][0])
+
+                            else:#如果样本点少于等于3个
+                               mark_list=[]
+                               for j in range(list_length_first):
+                                   if info_order[i][j]==list_length_first-1:
+                                       mark_list.append(1)#相关性排在倒数1位以内
+
+                               if sum(mark_list)==list_length_first-1 and max(info_N[i])<0.5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   results.append(batch_ys[i][0])
+
+                        num_lack=total_length-results.__len__()
                         if num_lack>0:
                             results.extend([["o","o","o"]]*num_lack)
                         tf_feed.batch_results(results)
