@@ -643,7 +643,7 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                 return  [x[0],str(list_value[0]),float(list_value[1])]
 
             rdd=rdd.filter(lambda x:x[0]>=start_point and x[0]<start_point+length)
-            rdd=rdd.map(map_func_N).persist()
+            rdd=rdd.map(map_func_N)
             return rdd,time_point
 
         yd_num=list(filelist).__len__()

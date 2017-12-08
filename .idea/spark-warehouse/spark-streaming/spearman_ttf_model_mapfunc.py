@@ -214,17 +214,26 @@ def map_func(args, ctx):
                         def ttf_k(x):#快速tff变换
                             ttf=[]
                             rezult=np.fft.fft(x)
+                            # max_r=max([float(e.real) for e in rezult])
+                            # min_r=min([float(e.real) for e in rezult])
+                            #
+                            # max_i=max([float(e.imag) for e in rezult])
+                            # min_i=min([float(e.imag) for e in rezult])
+                            #
+                            # total_max=(max_r+max_i)/2
+                            # total_max=(min_r+min_i)/2
+
                             for i in [[float(e.real),float(e.imag)] for e in rezult]:
-                                if np.abs(i[0])<0.5:
+                                if np.abs(i[0])<0.1:
                                     ttf.append(0)
                                 else:
                                     ttf.append(i[0])
 
-                                if np.abs(i[1])<0.5:
+                                if np.abs(i[1])<0.1:
                                     ttf.append(0)
                                 else:
                                     ttf.append(i[1])
-                            return np.asarray(rezult)
+                            return np.asarray(ttf)
 
                         batch_ys=[[e[0],ttf_k(e[1])] for e in batch_ys]
 
@@ -238,41 +247,46 @@ def map_func(args, ctx):
                         info_order=np.zeros([list_length_first,list_length_first])#计算相关系数的排序，越小位数越大
                         for i in range(list_length_first):
                             for j in range(list_length_first):
-                                index=list_length_first-1
+                                index=list_length_first
                                 if j==i:
                                    info_order[i][j]=-1
                                 else:
                                    for w in range(list_length_first):
                                        if w!=i:
-                                          info_N[i][j]>info_N[w][j]
-                                          index=index-1
+                                         if info_N[i][j]>info_N[w][j]:
+                                            index=index-1
                                    info_order[i][j]=index
+
+                        # print("输出order！====：")
+                        # for i in range(list_length_first):
+                        #     for j in range(list_length_first):
+                        #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
 
                         #属于异常值的规则
                         if list_length_first>=4 and list_length_first<=10:
                             for i in range(list_length_first):
                                 mark_list=[]
                                 for j in range(list_length_first):
-                                    if info_order[i][j]>list_length_first-4:
+                                    if info_order[i][j]>=list_length_first-2:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>list_length_first*1/2:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
                             if list_length_first>10:
                                mark_list=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]>list_length_first-1-int(list_length_first*0.20):
+                                   if info_order[i][j]>=list_length_first-1-int(list_length_first*0.20):
                                        mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>list_length_first*1/2:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                             else:#如果样本点少于等于3个
                                mark_list=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]==list_length_first-1:
+                                   if info_order[i][j]==list_length_first-2:
                                        mark_list.append(1)#相关性排在倒数1位以内
 
-                               if sum(mark_list)==list_length_first-1 and max(info_N[i])<0.5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)==list_length_first-1 and max(info_N[i])<=0.6:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                         num_lack=total_length-results.__len__()
