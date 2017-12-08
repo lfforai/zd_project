@@ -255,7 +255,7 @@ def map_func(args, ctx):
                                 for j in range(list_length_first):
                                     if info_order[i][j]>list_length_first-4:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                if sum(mark_list)>list_length_first*1/2:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
                             if list_length_first>10:
@@ -263,7 +263,7 @@ def map_func(args, ctx):
                                for j in range(list_length_first):
                                    if info_order[i][j]>list_length_first-1-int(list_length_first*0.20):
                                        mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>list_length_first*1/2:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                             else:#如果样本点少于等于3个

@@ -50,6 +50,18 @@ from numpy import array
 # tmp = [('a',3, 1), ('b',3, 2), ('2',4,3), ('d',2, 4), ('2',1,5)]
 # print(sc.parallelize(tmp).sortBy(lambda x: [x[0],x[1]]).collect())
 
+a="G_LYXGF_1_315NQ001.S.txt"
+for j in range(str(a).__len__()):
+    len=str(a).__len__()
+    if j>0 and j<len-3:
+        if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
+                and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
+            index2=str(a).find("_",2) #第二次出现_
+            index3=str(a).find("_",index2+1)#第三次出现
+            index4=str(a).find("F",index3+1)
+            if index4!=-1:
+               print([a[0:index3],a[index3+1:index4],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+            else:
+               index4=str(a).find("N",index3+1)
+               print([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
 
-a=numpy.asarray([[1,0,1],[8,9,0]])
-print(max(a[1]))

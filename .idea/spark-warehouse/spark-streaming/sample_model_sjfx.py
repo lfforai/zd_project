@@ -35,6 +35,79 @@ conf=SparkConf().setMaster("spark://sjfx4:7077")
 # sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 
 #一、#############################################################################
+#['G_CFMY_1', 'Q', 'G_CFMY_1_001','G_CFMY_1_001FQ001.txt','001']
+def fuc(iterator):
+    value_list=[]
+    for a in iterator:
+        for j in range(str(a).__len__()):
+            len=str(a).__len__()
+            if j>0 and j<len-3:
+                if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
+                        and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
+                    index2=str(a).find("_",2) #第二次出现_
+                    index3=str(a).find("_",index2+1)#第三次出现
+                    index4=str(a).find("F",index3+1)
+                    if index4!=-1:
+                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+                    else:
+                        index4=str(a).find("N",index3+1)
+                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+    return value_list
+
+#采样可能来源于不同的文件夹FQ，FS，FW，hdfs_path是一个总体文件的目录
+def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
+                       group_num=4,sample_rato_FQS=1.0,sample_rato_FQS_cz=1.0,func= lambda x:x):
+
+    #当func对文件名字进行分组的规则
+    #分组规则1：按每个FQ，FS，FW每个文件夹中的各厂站数据文件进行抽样,建立全部总体模型
+    #分组规则2：按每个厂为一组，使用所有文件，但是对每个文件中的数据进行抽样建模
+
+    from hdfs.client import Client #hdfs和本地文件的交互
+    import pyhdfs as pd #判断文件是否存在
+    import numpy as  np
+
+    fs_pyhdfs = pd.HdfsClient(addrs,port)
+    fs_hdfs = Client("http://"+addrs+":"+port)
+
+    #全部样本 ['G_CFMY', 'Q', 'G_CFMY_1_001', 'G_CFMY_1_001FQ001.txt']
+    #       ['G_CFMY_1', 'Q', 'G_CFMY_1_003', 'G_CFMY_1_003FQ001.txt','003']
+    total_fname_list=[]
+    for i in hdfs_path:
+        total_fname_list.extend([e for e in func(fs_hdfs.list(i))])
+
+    rdd=sc.parallelize(total_fname_list).map(lambda x:[str(x[0])+"|"+str(x[1]),x[3]])
+    # print(rdd.collect())
+
+    #按FQ，FS，FW分层抽样：每个厂站都必须有原点样本，其中抽样比率按sample_rato
+    fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS)).collect())
+
+    list_total=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).collect()
+
+    #FQ，FW，FS
+    FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("Q"),list_total))
+    FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("S"),list_total))
+    FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("W"),list_total))
+
+    group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total)]
+    #按每个厂站抽样
+    def add(x,y):
+        return str(x)+"|"+str(y)
+
+    fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
+    group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add) \
+        .map(lambda x:[str(x[0]).split("|")[0],str(x[0]).split("|")[1],x[1]]).collect()
+    #tensorflow_num的数量进行小块切割
+    # print(group_name_cz_list)
+
+    group_name_cz_list=[[e[0],e[1],e[2], \
+                         np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+"F"+str(e[1])+"/"+str(value))['length']/np.power(1024,2) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
+    return  group_name_total_list,group_name_cz_list
+    #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
+    #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
+
+
+
+
 #文件名分解函数，把原点名分解为原点名字、厂站、原点设备
 #['G_CFMY', 'Q', 'G_CFMY_1_001', 'G_CFMY_1_001FQ001.txt']
 def fuc(iterator):
