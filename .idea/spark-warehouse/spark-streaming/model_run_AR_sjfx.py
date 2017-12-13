@@ -50,7 +50,7 @@ parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default
 # parser.add_argument("-i", "--images", help="HDFS path to MNIST images in parallelized format")
 # parser.add_argument("-l", "--labels", help="HDFS path to MNIST labels in parallelized format")
 parser.add_argument("-m", "--model", help="HDFS path to save/load model during train/inference", default="AR_model")
-parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=4)
+parser.add_argument("-n", "--cluster_size", help="number of nodes in the cluster", type=int, default=8)
 parser.add_argument("-o", "--output", help="HDFS path to save test/inference output", default="predictions")
 parser.add_argument("-r", "--readers", help="number of reader/enqueue threads", type=int, default=5)
 parser.add_argument("-s", "--steps", help="maximum number of steps", type=int, default=9)
@@ -64,9 +64,9 @@ args = parser.parse_args()
 #基础参数配置
 if＿AR_model_train=0
 if_AR_mode_inference=0
-if_efk_mode_train=0
-if_efk_mode_inference=0
-if_cluster_mode_inference=1
+if_efk_mode_train=1
+if_efk_mode_inference=1
+if_cluster_mode_inference=0
 
 print("----------------AR  开始-------------------------------------")
 #二、数据样本抽样
@@ -100,11 +100,12 @@ def fuc(iterator):
         index5=str(a).find("_",index4+1)
         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
-
+print("1111111111111111111111111111111111")
+exit()
 FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
-print(cz_FQW)
-exit()
+# print(cz_FQW)
+# exit()
 sc.stop()
 #准备inference用数据集
 cz_FOW_inference=list.copy(cz_FQW)
@@ -657,7 +658,7 @@ if if_efk_mode_train==1:
                 bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
                 if(bool==False):
                     sc=SparkContext(conf=conf)
-                    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+                    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=1000,hdfs_addr="hdfs://sjfx1:9000/")
                     rdd=sc.union(ex).persist()
                     rdd_count=rdd.count()
                     ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
@@ -680,7 +681,7 @@ if if_efk_mode_train==1:
     bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
     if(bool==False):
         sc=SparkContext(conf=conf)
-        ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
+        ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=1000,hdfs_addr="hdfs://sjfx1:9000/")
         rdd=sc.union(ex).persist()
         ekf_model_start_train(sc,args,spark_work,rdd,rdd_count,name=list_tmp[0][0])
         sc.stop()
@@ -703,7 +704,7 @@ if if_efk_mode_inference==1:
                 bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
-                    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+                    ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
                     rdd=sc.union(ex).persist()
                     ekf_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
                     sc.stop()
@@ -725,7 +726,7 @@ if if_efk_mode_inference==1:
     bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
-        ex=sex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=20000,hdfs_addr="hdfs://sjfx1:9000/")
+        ex=sex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
         rdd=sc.union(ex).persist()
         ekf_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
         sc.stop()
@@ -878,9 +879,9 @@ if if_cluster_mode_inference==1:
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                  filelist=list_tmp,work_num=spark_work,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=500,
+                                                 ,start_point=1000,
                                                  time_point="#",
-                                                 pitch_length=5000)
+                                                 pitch_length=10000)
 
                     rdd=sc.union(ex).persist()
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
@@ -911,9 +912,9 @@ if if_cluster_mode_inference==1:
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                           filelist=list_tmp,work_num=spark_work,
                                                           hdfs_addr="hdfs://sjfx1:9000"
-                                                          ,start_point=500,
+                                                          ,start_point=1000,
                                                           time_point="#",
-                                                          pitch_length=5000)
+                                                          pitch_length=10000)
         rdd=sc.union(ex).persist()
         spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+

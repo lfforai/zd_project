@@ -105,7 +105,7 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
             for i in iter:
                 list_value_N=list(str(i[2]).split("|"))#分解
                 list_value=[e for e in list_value_N\
-                            if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>500]
+                            if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>1000]
                 len=list_value.__len__()#长度
                 if len==0:
                    pass
@@ -276,7 +276,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fracti
            eq_type=i[1]#原点种类 F功率 Q电量 S风速
            file_length=float(i[3])
            filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
-           # print(filename_list)
+           print(filename_list)
            cz_rdd_list=[]#每个厂+Q，W，F
            sum_count=0
            for j in filename_list:
@@ -691,9 +691,9 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                         return rezult
                     return map_func
                 a=rdd.mapPartitions(time_func(time_n)).collect()
-                print("a:=",a)
+                # print("a:=",a)
                 if len(a)==0:
-                   print("a 是 空")
+                   # print("a 是 空")
                    start_point=0
                 else:
                    start_point=int(a[0][0])
