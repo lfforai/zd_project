@@ -72,25 +72,39 @@ print("----------------AR  开始-------------------------------------")
 #二、数据样本抽样
 #spark = sql_n.SparkSession.builder.appName("lf").config(conf=conf).getOrCreate()
 sc=SparkContext(conf=conf)
+# def fuc(iterator):
+#     value_list=[]
+#     for a in iterator:
+#         for j in range(str(a).__len__()):
+#             len=str(a).__len__()
+#             if j>0 and j<len-3:
+#                 if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
+#                         and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
+#                     index2=str(a).find("_",2) #第二次出现_
+#                     index3=str(a).find("_",index2+1)#第三次出现
+#                     index4=str(a).find("F",index3+1)
+#                     if index4!=-1:
+#                         value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+#                     else:
+#                         index4=str(a).find("N",index3+1)
+#                         value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+#     return value_list
 def fuc(iterator):
     value_list=[]
     for a in iterator:
-        for j in range(str(a).__len__()):
-            len=str(a).__len__()
-            if j>0 and j<len-3:
-                if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
-                        and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
-                    index2=str(a).find("_",2) #第二次出现_
-                    index3=str(a).find("_",index2+1)#第三次出现
-                    index4=str(a).find("F",index3+1)
-                    if index4!=-1:
-                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
-                    else:
-                        index4=str(a).find("N",index3+1)
-                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
+        len=str(a).__len__()
+        index1=str(a).find("_",0) #第二次出现_
+        index2=str(a).find("_",index1+1)#第三次出现
+        index3=str(a).find("_",index2+1)
+        index4=str(a).find("_",index3+1)
+        index5=str(a).find("_",index4+1)
+        value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
-FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
+
+FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
+print(cz_FQW)
+exit()
 sc.stop()
 #准备inference用数据集
 cz_FOW_inference=list.copy(cz_FQW)
@@ -320,13 +334,13 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
 
 #启动进程，按每worker个为一组进行进行数据分解
 num=0
-spark_work=4
+spark_work=8
 list_tmp=[]
 
 #剔除厂站-原点大小小于500M的点，补足spark_work的点数量，用test名字代替（对齐运算用）
 #print(client_N.status("/zd_data11.14/FQ/G_CFMY_1_001FQ001.txt"))
 from operator import itemgetter, attrgetter
-cz_FQW=list(filter(lambda x:x[3]>500,sorted(cz_FQW,key=itemgetter(3))))
+cz_FQW=list(filter(lambda x:x[3]>-1,sorted(cz_FQW,key=itemgetter(3))))
 yu_num=spark_work-cz_FQW.__len__()%spark_work
 test_cz_FQW=cz_FQW[0]
 test_cz_FQW[0]=cz_FQW[0][0]
@@ -334,7 +348,7 @@ new_cz_FQW=[test_cz_FQW]*yu_num
 j=0
 re=[]
 for value in new_cz_FQW:
-    re.append([value[0]+"_"+str(j)+"$",value[1],value[2],value[3]])
+    re.append([value[0]+"_"+str(j)+"#",value[1],value[2],value[3]])
     j=j+1
 
 print("------------------")
@@ -835,7 +849,6 @@ def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
     # print("结果：==========================",labelRDD1.mapPartitionsWithIndex(func_m).collect())
     print("----------------spearman-inference over--------------------------")
 
-
 num=0
 list_tmp=[]
 
@@ -863,11 +876,11 @@ if if_cluster_mode_inference==1:
                     sc=SparkContext(conf=conf)
                     #ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
-                                                 filelist=list_tmp,work_num=4,
+                                                 filelist=list_tmp,work_num=spark_work,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=20000,
+                                                 ,start_point=500,
                                                  time_point="#",
-                                                 pitch_length=300000)
+                                                 pitch_length=5000)
 
                     rdd=sc.union(ex).persist()
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
@@ -896,11 +909,11 @@ if if_cluster_mode_inference==1:
         sc=SparkContext(conf=conf)
         #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
-                                                          filelist=list_tmp,work_num=4,
+                                                          filelist=list_tmp,work_num=spark_work,
                                                           hdfs_addr="hdfs://sjfx1:9000"
-                                                          ,start_point=20000,
+                                                          ,start_point=500,
                                                           time_point="#",
-                                                          pitch_length=300000)
+                                                          pitch_length=5000)
         rdd=sc.union(ex).persist()
         spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+

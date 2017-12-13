@@ -36,23 +36,18 @@ conf=SparkConf().setMaster("spark://sjfx4:7077")
 
 #一、#############################################################################
 #['G_CFMY_1', 'Q', 'G_CFMY_1_001','G_CFMY_1_001FQ001.txt','001']
-def fuc(iterator):
-    value_list=[]
-    for a in iterator:
-        for j in range(str(a).__len__()):
-            len=str(a).__len__()
-            if j>0 and j<len-3:
-                if  a[j].isdigit() and (a[j+1].__eq__("F") or a[j+1].__eq__("N")) \
-                        and  (a[j+2].__eq__("W") or a[j+2].__eq__("Q") or a[j+2].__eq__("S")):
-                    index2=str(a).find("_",2) #第二次出现_
-                    index3=str(a).find("_",index2+1)#第三次出现
-                    index4=str(a).find("F",index3+1)
-                    if index4!=-1:
-                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
-                    else:
-                        index4=str(a).find("N",index3+1)
-                        value_list.append([a[0:index3],a[j+2],a[0:j+1],str(a),a[index3+1:index4]])
-    return value_list
+#'G_BJWL_HH_03WA_PV003', 'PV', 'PV003', 'G_BJWL_HH_03W_001GA_PV003', '001GA'
+# def fuc(iterator):
+#     value_list=[]
+#     for a in iterator:
+#         len=str(a).__len__()
+#         index1=str(a).find("_",0) #第二次出现_
+#         index2=str(a).find("_",index1+1)#第三次出现
+#         index3=str(a).find("_",index2+1)
+#         index4=str(a).find("_",index3+1)
+#         index5=str(a).find("_",index4+1)
+#         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
+#     return value_list
 
 #采样可能来源于不同的文件夹FQ，FS，FW，hdfs_path是一个总体文件的目录
 def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070", \
@@ -84,9 +79,9 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
     list_total=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).collect()
 
     #FQ，FW，FS
-    FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("Q"),list_total))
-    FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("S"),list_total))
-    FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("W"),list_total))
+    FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PJ"),list_total))
+    FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("CU"),list_total))
+    FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PW"),list_total))
 
     group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total)]
     #按每个厂站抽样
@@ -94,13 +89,72 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
         return str(x)+"|"+str(y)
 
     fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
+
     group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add) \
-        .map(lambda x:[str(x[0]).split("|")[0],str(x[0]).split("|")[1],x[1]]).collect()
-    #tensorflow_num的数量进行小块切割
-    # print(group_name_cz_list)
+        .map(lambda x:[str(x[0]).split("|")[0].replace(".txt",""),str(x[0]).split("|")[1],x[1]])\
+        .filter(lambda x:str(x[2]).split("|").__len__()>2).persist()
+    # print("xuyao:=========",group_name_cz_list)
+    # print(group_name_cz_list.take(10))
+    #按照每个厂站后面点的长度4个源点归为一组
+    def map_func_spilt(pitch,addrs,port):
+        def map_func(iter):
+            from hdfs.client import Client #hdfs和本地文件的交互
+            fs_hdfs = Client("http://"+addrs+":"+port)
+
+            result=[]
+            for i in iter:
+                list_value_N=list(str(i[2]).split("|"))#分解
+                list_value=[e for e in list_value_N\
+                            if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>500]
+                len=list_value.__len__()#长度
+                if len==0:
+                   pass
+                else:
+                    if len>2 and len<=pitch:#小于等于4个的情况下不进行分组
+                       temp=""
+                       for w in range(len):
+                           if w==0:
+                               temp=str(temp)+str(list_value[w])+"|"
+                           else:
+                               if w!=len-1:
+                                   temp=str(temp)+str(list_value[w])+"|"
+                               else:
+                                   temp=str(temp)+str(list_value[w])
+                       result.append([str(i[0]),i[1],temp])
+                    else:
+                        pitch_num=int(len/pitch)
+                        for j in range(pitch_num):
+                            if j!=pitch_num-1:
+                               temp=""
+                               for w in range(pitch):
+                                 if w==0:
+                                    temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])+"|"
+                                 else:
+                                    if w!=pitch-1:
+                                       temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])+"|"
+                                    else:
+                                       temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])
+                               result.append([i[0]+"_$"+str(j),i[1],temp])
+                            else:#余数
+                               temp=""
+                               yu=0
+                               # yu=int(len%pitch)
+                               for w in range(pitch):
+                                    if w==0:
+                                        temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])+"|"
+                                    else:
+                                        if w!=pitch+yu-1:
+                                            temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])+"|"
+                                        else:
+                                            temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])
+                               result.append([i[0]+"_$"+str(j),i[1],temp])
+            return result
+        return map_func
+
+    group_name_cz_list=group_name_cz_list.mapPartitions(map_func_spilt(5,addrs,port)).collect()
 
     group_name_cz_list=[[e[0],e[1],e[2], \
-                         np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+"F"+str(e[1])+"/"+str(value))['length']/np.power(1024,2) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
+                         np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+str(e[1])+"/"+str(value))['length']/np.power(1024,1) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
     return  group_name_total_list,group_name_cz_list
     #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
     #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
@@ -123,7 +177,7 @@ def fuc(iterator):
     return value_list
 
 #采样可能来源于不同的文件夹FQ，FS，FW，hdfs_path是一个总体文件的目录
-def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_data11.14/FW/"],addrs="sjfx1",port="50070",\
+def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070",\
                      group_num=4,sample_rato_FQS=1.0,sample_rato_FQS_cz=1.0,func= lambda x:x):
 
       #当func对文件名字进行分组的规则
@@ -150,9 +204,9 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
       list_total=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).collect()
 
       #FQ，FW，FS
-      FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("Q"),list_total))
-      FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("S"),list_total))
-      FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|")[1].__eq__("W"),list_total))
+      FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PJ"),list_total))
+      FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("CU"),list_total))
+      FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PW"),list_total))
 
       group_name_total_list=[FQ_total,FS_total,FW_total]
 
@@ -164,7 +218,7 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/zd_
       group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add)\
       .map(lambda x:[str(x[0]).split("|")[0],str(x[0]).split("|")[1],x[1]]).collect()
       group_name_cz_list=[[e[0],e[1],e[2],\
-                        np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+"F"+str(e[1])+"/"+str(value))['length']/np.power(1024,2) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
+                        np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+str(e[1])+"/"+str(value))['length']/np.power(1024,2) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
       return  group_name_total_list,group_name_cz_list
        #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
@@ -221,7 +275,7 @@ def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fracti
            cz_name=i[0]#厂站名字
            eq_type=i[1]#原点种类 F功率 Q电量 S风速
            file_length=float(i[3])
-           filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+           filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
            # print(filename_list)
            cz_rdd_list=[]#每个厂+Q，W，F
            sum_count=0
@@ -298,7 +352,7 @@ def cluster_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fract
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
             file_length=float(i[3])
-            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
             sum_count=0
@@ -375,7 +429,7 @@ def cluster_FFT_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,f
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
             file_length=float(i[3])
-            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
             sum_count=0
@@ -455,7 +509,7 @@ def cluster_FFT_file_to_rdd2(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
             file_length=float(i[3])
-            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
             sum_count=0
@@ -532,7 +586,7 @@ def cluster_FFT_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,f
             cz_name=i[0]#厂站名字
             eq_type=i[1]#原点种类 F功率 Q电量 S风速
             file_length=float(i[3])
-            filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+            filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
             # print(filename_list)
             cz_rdd_list=[]#每个厂+Q，W，F
             sum_count=0
@@ -556,7 +610,6 @@ def cluster_FFT_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,f
         exit()
     return  all_rdd_list
 
-
 #FFT和ｓｐｅａｒｍａｎ
 #在一个ｒｄｄ中提取一段连续长短的数据
 def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
@@ -571,11 +624,13 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
             import re
 
             rdd=sc.textFile(filename)
-
             count_num=rdd.count()#总长度
             if length>count_num:
                 print("采样的长度不能大于样本全部长度！")
-                exit()
+                length=int(count_num*0.90)
+                print("取样长度为：=",length)
+            else:
+                print("取样长度,正常为：=",length)
 
             def func_count(num,iter):
                 j=0
@@ -612,20 +667,22 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
 
             if  start_point!=-1:
                 a=rdd.filter(lambda x:x[0]==start_point).collect()
+                # print("a:=",a)
                 time_point=str(a[0][1]).split(",")[2]
                 print("start_point:=",start_point)
             else:
-                pattern = re.compile(r'(.*)\.([0-9]+)')
-                m = pattern.match(time_point)
-                time_n=time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S'))
+                # pattern = re.compile(r'(.*)\.([0-9]+)')
+                # m = pattern.match(time_point)
+                # time_n=time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S'))
+                time_n=time.mktime(time.strptime(time_point,'%Y-%m-%d %H:%M:%S'))
                 def time_func(time_n):
                     def map_func(iter):
                         rezult=[]
                         pattern = re.compile(r'(.*)\.([0-9]+)')
                         for i in iter:
                             value=i[1].split(",")
-                            m=pattern.match(str(value[2]))
-                            liunx_time=time.mktime(time.strptime(m.group(1),'%Y-%m-%d %H:%M:%S'))
+                            # m=pattern.match(str(value[2]))
+                            liunx_time=time.mktime(time.strptime(value[2],'%Y-%m-%d %H:%M:%S'))
                             if liunx_time-time_n>60:
                                 break
                             if liunx_time-time_n<60 and liunx_time-time_n>=0:
@@ -634,7 +691,12 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                         return rezult
                     return map_func
                 a=rdd.mapPartitions(time_func(time_n)).collect()
-                start_point=int(a[0][0])
+                print("a:=",a)
+                if len(a)==0:
+                   print("a 是 空")
+                   start_point=0
+                else:
+                   start_point=int(a[0][0])
                 print("start_point:=",start_point)
 
             # 开始采样点
@@ -654,7 +716,7 @@ def cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                 cz_name=i[0]#厂站名字
                 eq_type=i[1]#原点种类 F功率 Q电量 S风速
                 file_length=float(i[3])
-                filename_list=[hdfs_addr+filedir+"F"+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
+                filename_list=[hdfs_addr+filedir+str(eq_type)+"/"+str(e) for e in str(i[2]).split("|")]
                 # print(filename_list)
                 cz_rdd_list=[]#每个厂+Q，W，F
                 sum_count=0
@@ -757,7 +819,7 @@ def data_to_inference(addrs="sjfx1",port="50070",cz_FQW=[],network_num=4):
     #全部样本 ['G_CFMY', 'Q', 'G_CFMY_1_001', 'G_CFMY_1_001FQ001.txt']
     inference_file_list=[]
     for i in list(cz_FQW):
-        inference_file_list.extend([[i[0],i[1],e,fs_hdfs.status("/zd_data11.14/"+"F"+str(i[1])+"/"+str(e))['length']/np.power(1024,2)] for e in str(i[2]).split("|")])
+        inference_file_list.extend([[i[0],i[1],e,fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length']/np.power(1024,2)] for e in str(i[2]).split("|")])
     # print("处理前：",inference_file_list.__len__())
     # print(inference_file_list)
     #按network_num对齐文件数

@@ -263,27 +263,27 @@ def map_func(args, ctx):
                         #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
 
                         #属于异常值的规则
-                        if list_length_first>=4 and list_length_first<=10:
+                        if list_length_first==5:
                             for i in range(list_length_first):
                                 mark_list=[]
                                 for j in range(list_length_first):
-                                    if info_order[i][j]>=list_length_first-2:
+                                    if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                if sum(mark_list)>=list_length_first-1:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
-                            if list_length_first>10:
+                            if list_length_first>5:
                                mark_list=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]>=list_length_first-1-int(list_length_first*0.20):
+                                   if info_order[i][j]>=list_length_first-2:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>list_length_first*3/5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>list_length_first-2:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                             else:#如果样本点少于等于3个
                                mark_list=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]==list_length_first-2:
+                                   if info_order[i][j]==list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
 
                                if sum(mark_list)==list_length_first-1 and max(info_N[i])<=0.6:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的

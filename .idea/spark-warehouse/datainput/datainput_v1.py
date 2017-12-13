@@ -42,13 +42,13 @@ def local_to_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",loca
     fs_pyhdfs = pd.HdfsClient(addrs,port)
     fs_hdfs = Client("http://"+addrs+":"+port)
 
-    if(file_hdfsname.__contains__("FS") or file_hdfsname.__contains__("NS")):
-        mid_path="FS/"
+    if(file_hdfsname.__contains__("CU") or file_hdfsname.__contains__("CU")):
+        mid_path="CU/"
     else:
-        if(file_hdfsname.__contains__("FQ") or file_hdfsname.__contains__("NQ")):
-            mid_path="FQ/"
+        if(file_hdfsname.__contains__("PJ") or file_hdfsname.__contains__("PJ")):
+            mid_path="PJ/"
         else:
-            mid_path="FW/"
+            mid_path="PW/"
 
     if(not fs_pyhdfs.exists(hdfs_path+mid_path+file_hdfsname)):
         print("存储开始："+hdfs_path+mid_path+file_hdfsname)
@@ -97,7 +97,7 @@ def delete_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",recurs
 
 #×××××××××××××××××××××××××××××文件目录××××××××××××××××××××××××××××××
 #文件或者目录删除
-deletefilename="/rezult/spearman_G_CFYH_2|W||G_CFYH_2|Q||G_CFYH_1|S||G_CFYH_1|W.txt"
+deletefilename="/rezult"
     #"/rezult/AR['G_ZDBY', 'Q', 'G_ZDBY_1_117NQ001.D.txt|G_ZDBY_1_117NQ002.D.txt|G_ZDBY_1_118NQ001.D.txt|G_ZDBY_1_118NQ002.D.txt|G_ZDBY_2_235NQ001.D.txt|G_ZDBY_2_235NQ002.D.txt|G_ZDBY_2_236NQ001.D.txt|G_ZDBY_2_236NQ002.D.txt', 604.0].txt"
     #"/user/root/model"
     #"/rezult"
@@ -113,7 +113,7 @@ hdfs_dir="/zd_data11.14/FQ/"
 file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
-local_dir="/lf/2017.11.14/test_data/"
+local_dir="/lf/data/test1/"
 
 hdfs_dir="/zd_data11.14/"
 
