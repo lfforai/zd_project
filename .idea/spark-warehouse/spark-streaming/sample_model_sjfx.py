@@ -105,7 +105,7 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
             for i in iter:
                 list_value_N=list(str(i[2]).split("|"))#分解
                 list_value=[e for e in list_value_N\
-                            if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>1000]
+                            if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>=800]
                 len=list_value.__len__()#长度
                 if len==0:
                    pass

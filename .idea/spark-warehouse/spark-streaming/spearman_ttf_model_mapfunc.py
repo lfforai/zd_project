@@ -253,7 +253,7 @@ def map_func(args, ctx):
                                 else:
                                    for w in range(list_length_first):
                                        if w!=i:
-                                         if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.98:
+                                         if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.92:
                                             index=index-1
                                    info_order[i][j]=index
 
@@ -263,7 +263,7 @@ def map_func(args, ctx):
                         #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
 
                         #属于异常值的规则
-                        if list_length_first==5:
+                        if list_length_first>=5 and list_length_first<=7:
                             for i in range(list_length_first):
                                 mark_list=[]
                                 for j in range(list_length_first):
@@ -272,7 +272,7 @@ def map_func(args, ctx):
                                 if sum(mark_list)>=list_length_first-1:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
-                            if list_length_first>5:
+                            if list_length_first>7:
                                mark_list=[]
                                for j in range(list_length_first):
                                    if info_order[i][j]>=list_length_first-1:
@@ -286,7 +286,7 @@ def map_func(args, ctx):
                                    if info_order[i][j]==list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
 
-                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.55:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    results.append(batch_ys[i][0])
 
                         num_lack=total_length-results.__len__()

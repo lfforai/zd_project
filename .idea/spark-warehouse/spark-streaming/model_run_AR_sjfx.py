@@ -64,9 +64,13 @@ args = parser.parse_args()
 #基础参数配置
 if＿AR_model_train=0
 if_AR_mode_inference=0
-if_efk_mode_train=1
-if_efk_mode_inference=1
-if_cluster_mode_inference=0
+if_efk_mode_train=0
+if_efk_mode_inference=0
+if_cluster_mode_inference=1
+if_spear_mode_inference=0
+
+# print("1111111111111111111111111111111111")
+# exit()
 
 print("----------------AR  开始-------------------------------------")
 #二、数据样本抽样
@@ -100,8 +104,7 @@ def fuc(iterator):
         index5=str(a).find("_",index4+1)
         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
-print("1111111111111111111111111111111111")
-exit()
+
 FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 # print(cz_FQW)
@@ -655,7 +658,7 @@ if if_efk_mode_train==1:
             num=num+1
         else:
             if num%spark_work==0:
-                bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+                bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[1][0])+"|"+str(list_tmp[2][0])+"|"+str(list_tmp[0][1]))
                 if(bool==False):
                     sc=SparkContext(conf=conf)
                     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=1000,hdfs_addr="hdfs://sjfx1:9000/")
@@ -678,7 +681,7 @@ if if_efk_mode_train==1:
                 num=num+1
 
     print("efk_model last done：")#处理最后一组
-    bool=fs_pyhdfs.exists("/model/"+"efk_model_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1]))
+    bool=fs_pyhdfs.exists("/model/"+"efk_model_"++str(list_tmp[0][0])+"|"+str(list_tmp[1][0])+"|"+str(list_tmp[2][0])+"|"+str(list_tmp[0][1]))
     if(bool==False):
         sc=SparkContext(conf=conf)
         ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.30,max_sample_length=1000,hdfs_addr="hdfs://sjfx1:9000/")
@@ -701,7 +704,7 @@ if if_efk_mode_inference==1:
             num=num+1
         else:
             if num%spark_work==0:
-                bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+                bool=fs_pyhdfs.exists("/rezult/"+"ekf_"++str(list_tmp[0][0])+"|"+str(list_tmp[1][0])+"|"+str(list_tmp[2][0])+"|"+str(list_tmp[0][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
                     ex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
@@ -723,7 +726,7 @@ if if_efk_mode_inference==1:
                 num=num+1
 
     print("last done：")#处理最后一组
-    bool=fs_pyhdfs.exists("/rezult/"+"ekf_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+    bool=fs_pyhdfs.exists("/rezult/"+"ekf_"++str(list_tmp[0][0])+"|"+str(list_tmp[1][0])+"|"+str(list_tmp[2][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
         ex=sex=sample_model_sjfx.sample_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000/")
@@ -853,7 +856,7 @@ def spearman_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
 num=0
 list_tmp=[]
 
-if if_cluster_mode_inference==1:
+if if_spear_mode_inference==1:
     for i in list(cz_FQW):
         # if times==1:
         #     break
@@ -865,23 +868,36 @@ if if_cluster_mode_inference==1:
             num=num+1
         else:
             if num%spark_work==0:
-                # print("num:==",num)
-                # for mm  in range(list_tmp.__len__()):
-                #    print(list_tmp[mm])
-                #    print("------------------")
+                #print("num:==",num)
                 bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                       +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                       "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                       "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
                 if bool==False:
                     sc=SparkContext(conf=conf)
+                    #按大小分配数量
+                    mark_list=[];
+                    for mm  in range(list_tmp.__len__()):
+                        mark_list.append(float(list_tmp[mm][3]/str(list_tmp[mm][2]).split("|").__len__()))
+
+                    if min(mark_list)<1000:
+                        start_point_spear=1000;
+                        pitch_length_spear=10000;
+                    else:
+                        if min(mark_list)>=1000 and min(mark_list)<=1500:
+                            start_point_spear=3000;
+                            pitch_length_spear=15000;
+                        else:
+                            start_point_spear=5000;
+                            pitch_length_spear=20000;
+
                     #ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                  filelist=list_tmp,work_num=spark_work,
                                                  hdfs_addr="hdfs://sjfx1:9000"
-                                                 ,start_point=1000,
+                                                 ,start_point=start_point_spear,
                                                  time_point="#",
-                                                 pitch_length=10000)
+                                                 pitch_length=pitch_length_spear)
 
                     rdd=sc.union(ex).persist()
                     spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
@@ -908,19 +924,129 @@ if if_cluster_mode_inference==1:
     bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
     if bool==False:
         sc=SparkContext(conf=conf)
+        mark_list=[];
+        for mm  in range(list_tmp.__len__()):
+            mark_list.append(float(list_tmp[mm][3]/str(list_tmp[mm][2]).split("|").__len__()))
+
+        if min(mark_list)<1000:
+            start_point_spear=1000;
+            pitch_length_spear=10000;
+        else:
+            if min(mark_list)>=1000 and min(mark_list)<=1500:
+                start_point_spear=3000;
+                pitch_length_spear=15000;
+            else:
+                start_point_spear=5000;
+                pitch_length_spear=20000;
         #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                           filelist=list_tmp,work_num=spark_work,
                                                           hdfs_addr="hdfs://sjfx1:9000"
-                                                          ,start_point=1000,
+                                                          ,start_point=start_point_spear,
                                                           time_point="#",
-                                                          pitch_length=10000)
+                                                          pitch_length=pitch_length_spear)
         rdd=sc.union(ex).persist()
         spearman_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                                                   "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                                                   "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
                                       )
+        sc.stop()
+    print("spearman all over")
+
+if if_cluster_mode_inference==1:
+    for i in list(cz_FQW):
+        # if times==1:
+        #     break
+        print("i===========",i)
+        #i=========== ['G_ZDBY_0$', 'W', 'G_ZDBY_1_117NW001.1.txt|G_ZDBY_1_117NW002.1.txt|G_ZDBY_1_118NW001.1.txt|G_ZDBY_1_118NW002.1.txt|G_ZDBY_2_235NW001.1.txt|G_ZDBY_2_235NW002.1.txt|G_ZDBY_2_236NW001.1.txt|G_ZDBY_2_236NW002.1.txt', 593.0]
+
+        if num==0:
+            list_tmp.append(i)
+            num=num+1
+        else:
+            if num%spark_work==0:
+                #print("num:==",num)
+                bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                      +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                      "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                      "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
+                if bool==False:
+                    sc=SparkContext(conf=conf)
+                    #按大小分配数量
+                    mark_list=[];
+                    for mm  in range(list_tmp.__len__()):
+                        mark_list.append(float(list_tmp[mm][3]/str(list_tmp[mm][2]).split("|").__len__()))
+
+                    if min(mark_list)<1000:
+                        max_sample_length=50;
+                        pitch_length=120;
+                    else:
+                        if min(mark_list)>=1000 and min(mark_list)<=1500:
+                            max_sample_length=70;
+                            pitch_length=120;
+                        else:
+                            max_sample_length=90;
+                            pitch_length=120;
+
+                    #ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+                    ex=sample_model_sjfx.cluster_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=list_tmp,
+                                                             work_num=spark_work,fractions=0.8,
+                                                             max_sample_length=max_sample_length,
+                                                             hdfs_addr="hdfs://sjfx1:9000",
+                                                             pitch_length=pitch_length)
+
+                    rdd=sc.union(ex).persist()
+                    cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                                                               +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                                                               "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                                                               "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
+                                                   )
+                    sc.stop()
+                    print("---------------next--------------------")
+                    list_tmp=[]
+                    num=num+1
+                    list_tmp.append(i)
+                    # times=1
+                else:
+                    print("-------------next--------------------")
+                    list_tmp=[]
+                    num=num+1
+                    list_tmp.append(i)
+            else:
+                list_tmp.append(i)
+                num=num+1
+
+    print("last done：")#处理最后一组
+    bool=fs_pyhdfs.exists("/rezult/"+"cluster_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
+    if bool==False:
+        sc=SparkContext(conf=conf)
+        mark_list=[];
+        for mm  in range(list_tmp.__len__()):
+            mark_list.append(float(list_tmp[mm][3]/str(list_tmp[mm][2]).split("|").__len__()))
+
+        if min(mark_list)<1000:
+            max_sample_length=50;
+            pitch_length=150;
+        else:
+            if min(mark_list)>=1000 and min(mark_list)<=1500:
+                max_sample_length=70;
+                pitch_length=150;
+            else:
+                max_sample_length=90;
+                pitch_length=150;
+        #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
+        ex=sample_model_sjfx.cluster_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=list_tmp,
+                                                 work_num=spark_work,fractions=0.8,
+                                                 max_sample_length=max_sample_length,
+                                                 hdfs_addr="hdfs://sjfx1:9000",
+                                                 pitch_length=pitch_length)
+        rdd=sc.union(ex).persist()
+        cluster_model_start_inference(sc,args,spark_work,rdd,name=str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
+                                                                   +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
+                                                                   "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
+                                                                   "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])
+                                       )
         sc.stop()
     print("spearman all over")
 
@@ -941,9 +1067,10 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 #     map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
 # rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_efk.txt")
 
-rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/A*").distinct().map(lambda x:str(x).split(",")). \
-    map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_AR.txt")
+rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
+    #.map(lambda x:str(x).split(",")). \
+    # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
+rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_2.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time
