@@ -48,7 +48,10 @@ def local_to_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",loca
         if(file_hdfsname.__contains__("PJ") or file_hdfsname.__contains__("PJ")):
             mid_path="PJ/"
         else:
-            mid_path="PW/"
+            if(file_hdfsname.__contains__("PW") or file_hdfsname.__contains__("PW")):
+                mid_path="PW/"
+            else:
+                mid_path="QT/"
 
     if(not fs_pyhdfs.exists(hdfs_path+mid_path+file_hdfsname)):
         print("存储开始："+hdfs_path+mid_path+file_hdfsname)
@@ -64,7 +67,7 @@ def local_dir_to_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",
     def bl_file(file_dir=local_filedir):
         [files]=os.walk(file_dir)
         files_list=list(files)
-        list_fl={"FS":"FS","FQ":"FQ","FW":"FW"}
+        # list_fl={"FS":"FS","FQ":"FQ","FW":"FW"}
         files_local=[item for item in map(lambda x:str(file_dir)+str(x),files_list[2])]
         files_name=[item for item in files_list[2]]
         print("file_loacl:=",files_local)
@@ -77,7 +80,12 @@ def local_dir_to_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",
     result=[]
     print("本次共导入文件：",len(local))
     for i  in range(len(local)):
+        # if local[i].__contains__("G_DBBT_SY_01W_009FJ_PJ002"):
+        #    print("G_DBBT_SY_01W_009FJ_PJ002")
+        #    time.sleep(5)
         local_to_hdfs(hdfs_path,addrs,port,local[i],hdfs[i])
+        # if local[i].__contains__("G_DBBT_SY_01W_009FJ_PJ002"):
+        #    exit()
     print("Sub-process(es) done.")
 
 #删除文件
@@ -113,9 +121,9 @@ hdfs_dir="/zd_data11.14/FQ/"
 file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
-local_dir="/lf/data/test1/"
+local_dir1="/lf/data/test3/"
 
-hdfs_dir="/zd_data11.14/"
+hdfs_dir1="/zd_data11.14/"
 
 ################################执行命令###############################
 #删除文件
@@ -126,9 +134,9 @@ if False:
 #单个本地文件上传
    local_to_hdfs(hdfs_path=hdfs_dir,addrs="sjfx1",port="50070",local_filename=local_dir+local_to_hdfs_filename,file_hdfsname=file_hdfsname)
 
-if False:
+if True:
 #整个本地文件上传
-   local_dir_to_hdfs(hdfs_path=hdfs_dir,addrs="sjfx1",port="50070",local_filedir=local_dir)
+   local_dir_to_hdfs(hdfs_path=hdfs_dir1,addrs="sjfx1",port="50070",local_filedir=local_dir1)
 
 # sc.textFile("hdfs://sjfx1:9000/zd_data11.14/FQ/G_CFYH_1_004FQ001_W.txt")\
 #     .map(lambda x:str(x).replace("G_CFYH_1_004FW001","G_CFYH_1_004FQ001_W"))\

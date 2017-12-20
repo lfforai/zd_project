@@ -66,8 +66,8 @@ if＿AR_model_train=0
 if_AR_mode_inference=0
 if_efk_mode_train=0
 if_efk_mode_inference=0
-if_cluster_mode_inference=1
-if_spear_mode_inference=0
+if_cluster_mode_inference=0
+if_spear_mode_inference=1
 
 # print("1111111111111111111111111111111111")
 # exit()
