@@ -106,21 +106,25 @@ import numpy.random as random
 import time
 x= random.rand(10240, 10240)
 y= random.rand(10240, 10240)
-st = time.time()
-for i in range(10):
-    z= np.dot(x, y)
-print('time: {:.3f}.'.format(time.time()-st))
-
-
-import minpy.numpy as np
-import minpy.numpy.random as random
-import time
-import OpenSSL.SSL
-
-x= random.rand(10240, 10240)
-y= random.rand(10240, 10240)
-st = time.time()
-for i in range(10):
-    z= np.dot(x, y)
-z.asnumpy()
-print('time: {:.3f}.'.format(time.time()-st))
+# st = time.time()
+# for i in range(10):
+#     z= np.dot(x, y)
+# print('time: {:.3f}.'.format(time.time()-st))
+#
+#
+# import minpy.numpy as np
+# import minpy.numpy.random as random
+# import time
+# import OpenSSL.SSL
+#
+# x= random.rand(10240, 10240)
+# y= random.rand(10240, 10240)
+# st = time.time()
+# for i in range(10):
+#     z= np.dot(x, y)
+# z.asnumpy()
+# print('time: {:.3f}.'.format(time.time()-st))
+b="afa|aad|afdas"
+print(b.count("|"))
+c=b.split("|")
+print(c)

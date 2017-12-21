@@ -79,21 +79,32 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
     list_total=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).collect()
 
     #FQ，FW，FS
-    FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PJ"),list_total))
-    FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("CU"),list_total))
-    FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PW"),list_total))
-    QT_total=map(lambda x:x[1],filter(lambda x:not str(x[0]).split("|").__eq__("PJ") and not str(x[0]).split("|").__eq__("CU") and not str(x[0]).split("|").__eq__("PW"),list_total))
+    # FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PJ"),list_total))
+    # FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("CU"),list_total))
+    # FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PW"),list_total))
+    # QT_total=map(lambda x:x[1],filter(lambda x:not str(x[0]).split("|").__eq__("PJ") and not str(x[0]).split("|").__eq__("CU") and not str(x[0]).split("|").__eq__("PW"),list_total))
 
-    group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total),list(QT_total)]
+    #group_name_total_list=[list(QT_total)]
+    #group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total),list(QT_total)]
     #按每个厂站抽样
     def add(x,y):
         return str(x)+"|"+str(y)
 
-    fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
+    # fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
+    #
+    # group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add) \
+    #     .map(lambda x:[str(x[0]).split("|")[0].replace(".txt",""),str(x[0]).split("|")[1],x[1]])\
+    #     .filter(lambda x:str(x[2]).split("|").__len__()>2).persist()
 
-    group_name_cz_list=rdd.sampleByKey(withReplacement=False,fractions=fractions,seed=0).reduceByKey(add) \
+    # fractions=dict(rdd.map(lambda x:x[0]).distinct().map(lambda x:(x,sample_rato_FQS_cz)).collect())
+
+    group_name_cz_list=rdd.reduceByKey(add)\
         .map(lambda x:[str(x[0]).split("|")[0].replace(".txt",""),str(x[0]).split("|")[1],x[1]])\
-        .filter(lambda x:str(x[2]).split("|").__len__()>2).persist()
+        .filter(lambda x:str(x[2]).count("|")>1)\
+        .persist()
+
+    # print(group_name_cz_list.collect())
+
     # print("xuyao:=========",group_name_cz_list)
     # print(group_name_cz_list.take(10))
     #按照每个厂站后面点的长度4个源点归为一组
@@ -116,20 +127,21 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
                 if len==0:
                    pass
                 else:
-                    if len>2 and len<=pitch:#小于等于4个的情况下不进行分组
+                    if len>2 and len<=pitch:#小于等于5个的情况下不进行分组
                        temp=""
                        for w in range(len):
                            if w==0:
-                               temp=str(temp)+str(list_value[w])+"|"
+                               temp=str(list_value[w])+"|"
                            else:
                                if w!=len-1:
                                    temp=str(temp)+str(list_value[w])+"|"
                                else:
                                    temp=str(temp)+str(list_value[w])
+
                        if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
-                           result.append([i[0]+"_$"+str(j),i[1],temp])
+                           result.append([i[0],i[1],temp])
                        else:
-                           result.append([i[0]+"_$"+str(j),"QT",temp])
+                           result.append([i[0],"QT",temp])
                     else:
                         pitch_num=int(len/pitch)
                         for j in range(pitch_num):
@@ -143,15 +155,15 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
                                        temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])+"|"
                                     else:
                                        temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])
-                                 if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
-                                     result.append([i[0]+"_$"+str(j),i[1],temp])
-                                 else:
-                                     result.append([i[0]+"_$"+str(j),"QT",temp])
+
+                               if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
+                                    result.append([i[0]+"_$"+str(j),i[1],temp])
+                               else:
+                                    result.append([i[0]+"_$"+str(j),"QT",temp])
                             else:#余数
                                temp=""
-                               yu=0
-                               # yu=int(len%pitch)
-                               for w in range(pitch):
+                               yu=int(len%pitch)
+                               for w in range(pitch+yu):
                                     if w==0:
                                         temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])+"|"
                                     else:
@@ -168,10 +180,11 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
         return map_func
 
     group_name_cz_list=group_name_cz_list.mapPartitions(map_func_spilt(5,addrs,port)).collect()
-
+    # print(group_name_cz_list)
+    # exit()
     group_name_cz_list=[[e[0],e[1],e[2], \
                          np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+str(e[1])+"/"+str(value))['length']/np.power(1024,1) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
-    return  group_name_total_list,group_name_cz_list
+    return group_name_cz_list
     #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
     #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
 

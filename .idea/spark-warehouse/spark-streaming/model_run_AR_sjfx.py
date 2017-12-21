@@ -106,7 +106,7 @@ def fuc(iterator):
     return value_list
 
 #FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
-FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
+cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 # print(cz_FQW)
 # exit()
@@ -860,16 +860,15 @@ list_tmp=[]
 if if_spear_mode_inference==1:
     for i in list(cz_FQW):
         # if times==1:
-        #     break
-        print("i===========",i)
+        #    break
         #i=========== ['G_ZDBY_0$', 'W', 'G_ZDBY_1_117NW001.1.txt|G_ZDBY_1_117NW002.1.txt|G_ZDBY_1_118NW001.1.txt|G_ZDBY_1_118NW002.1.txt|G_ZDBY_2_235NW001.1.txt|G_ZDBY_2_235NW002.1.txt|G_ZDBY_2_236NW001.1.txt|G_ZDBY_2_236NW002.1.txt', 593.0]
-
         if num==0:
             list_tmp.append(i)
             num=num+1
         else:
             if num%spark_work==0:
                 #print("num:==",num)
+                print(list_tmp)
                 bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+"||"
                                       +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                       "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
