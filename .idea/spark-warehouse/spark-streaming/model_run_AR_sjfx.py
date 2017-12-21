@@ -335,7 +335,7 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
             cluster_KDE.shutdown()
             print("----------------KDE-inference over--------------------------")
             print("{0} ===== Stop".format(datetime.now().isoformat()))
-QT_total
+
 
 #启动进程，按每worker个为一组进行进行数据分解
 num=0
