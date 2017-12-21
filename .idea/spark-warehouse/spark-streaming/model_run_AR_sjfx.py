@@ -105,7 +105,8 @@ def fuc(iterator):
         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
 
-FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
+#FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
+FQW,cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 # print(cz_FQW)
 # exit()
@@ -334,7 +335,7 @@ def AR_model_start_inference(sc,args,spark_worker_num,dataRDD,name):
             cluster_KDE.shutdown()
             print("----------------KDE-inference over--------------------------")
             print("{0} ===== Stop".format(datetime.now().isoformat()))
-
+QT_total
 
 #启动进程，按每worker个为一组进行进行数据分解
 num=0

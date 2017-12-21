@@ -82,8 +82,9 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
     FQ_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PJ"),list_total))
     FS_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("CU"),list_total))
     FW_total=map(lambda x:x[1],filter(lambda x:str(x[0]).split("|").__eq__("PW"),list_total))
+    QT_total=map(lambda x:x[1],filter(lambda x:not str(x[0]).split("|").__eq__("PJ") and not str(x[0]).split("|").__eq__("CU") and not str(x[0]).split("|").__eq__("PW"),list_total))
 
-    group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total)]
+    group_name_total_list=[list(FQ_total),list(FS_total),list(FW_total),list(QT_total)]
     #按每个厂站抽样
     def add(x,y):
         return str(x)+"|"+str(y)
@@ -104,8 +105,13 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
             result=[]
             for i in iter:
                 list_value_N=list(str(i[2]).split("|"))#分解
-                list_value=[e for e in list_value_N\
+                if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
+                  list_value=[e for e in list_value_N\
                             if (fs_hdfs.status("/zd_data11.14/"+str(i[1])+"/"+str(e))['length'])/(1024)>=800]
+                else:
+                  list_value=[e for e in list_value_N \
+                            if (fs_hdfs.status("/zd_data11.14/"+"QT/"+str(e))['length'])/(1024)>=800]
+
                 len=list_value.__len__()#长度
                 if len==0:
                    pass
@@ -134,7 +140,10 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
                                        temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])+"|"
                                     else:
                                        temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+1][w])
-                               result.append([i[0]+"_$"+str(j),i[1],temp])
+                                 if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
+                                     result.append([i[0]+"_$"+str(j),i[1],temp])
+                                 else:
+                                     result.append([i[0]+"_$"+str(j),"QT",temp])
                             else:#余数
                                temp=""
                                yu=0
@@ -147,12 +156,16 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
                                             temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])+"|"
                                         else:
                                             temp=str(temp)+str(list_value[j*pitch:j*pitch+pitch+yu+1][w])
-                               result.append([i[0]+"_$"+str(j),i[1],temp])
+
+                               if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
+                                   result.append([i[0]+"_$"+str(j),i[1],temp])
+                               else:
+                                   result.append([i[0]+"_$"+str(j),"QT",temp])
             return result
         return map_func
 
     group_name_cz_list=group_name_cz_list.mapPartitions(map_func_spilt(5,addrs,port)).collect()
-
+    print(group_name_cz_list)
     group_name_cz_list=[[e[0],e[1],e[2], \
                          np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+str(e[1])+"/"+str(value))['length']/np.power(1024,1) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
     return  group_name_total_list,group_name_cz_list
