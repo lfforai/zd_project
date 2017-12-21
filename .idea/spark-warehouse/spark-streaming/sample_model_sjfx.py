@@ -126,7 +126,10 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
                                    temp=str(temp)+str(list_value[w])+"|"
                                else:
                                    temp=str(temp)+str(list_value[w])
-                       result.append([str(i[0]),i[1],temp])
+                       if str(i[1]).__eq__("PJ") or str(i[1]).__eq__("PW") or str(i[1]).__eq__("CU"):
+                           result.append([i[0]+"_$"+str(j),i[1],temp])
+                       else:
+                           result.append([i[0]+"_$"+str(j),"QT",temp])
                     else:
                         pitch_num=int(len/pitch)
                         for j in range(pitch_num):
@@ -165,7 +168,7 @@ def sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/FQ/","/zd_data11.14/FS/","/z
         return map_func
 
     group_name_cz_list=group_name_cz_list.mapPartitions(map_func_spilt(5,addrs,port)).collect()
-    print(group_name_cz_list)
+
     group_name_cz_list=[[e[0],e[1],e[2], \
                          np.round(np.sum([fs_hdfs.status("/zd_data11.14/"+str(e[1])+"/"+str(value))['length']/np.power(1024,1) for value  in str(e[2]).split("|")]),0)] for e in group_name_cz_list]
     return  group_name_total_list,group_name_cz_list
