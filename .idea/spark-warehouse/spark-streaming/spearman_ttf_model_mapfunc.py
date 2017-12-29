@@ -210,6 +210,7 @@ def map_func(args, ctx):
 
                         pearson_out_module = tf.load_op_library('/tensorflow_user_lib/pearson_out.so')
                         temp_shape=tf.zeros([1])#传递shape的参数
+                        #modle_type=tf.zeros([1])#传递使用的距离模型 1欧式距离 2Pearson距离 3Manhattan 4余旋距离
 
                         def ttf_k(x):#快速tff变换
                             ttf=[]
@@ -233,15 +234,25 @@ def map_func(args, ctx):
                                     ttf.append(0)
                                 else:
                                     ttf.append(i[1])
-                            return np.asarray(ttf)
+                            return np.asarray(ttf[0:int(ttf.__len__()/2)])
 
-                        batch_ys=[[e[0],ttf_k(e[1])] for e in batch_ys]
+                        def smooth(x,len):
+                            x_list=np.array(x)
+                            pitch=int(x_list.size/len)
+                            # yu=x_list.size%len
+                            results=[]
+                            for i in range(pitch):
+                                results.append(np.average(x_list[i:i*pitch+pitch]))
+                            return np.array(results)
+
+                        batch_ys=[[e[0],ttf_k(smooth(e[1],10))] for e in batch_ys]
+                        print("ok")
 
                         with tf.Session() as sess:
                             for i in range(list_length_first):
                                 for j in range(list_length_first):
                                     if(i!=j):
-                                      info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape)))
+                                      info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape),np.array([2.0],dtype=float)))
                                       print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_N[i][j]))
                         sess.close()
                         info_order=np.zeros([list_length_first,list_length_first])#计算相关系数的排序，越小位数越大
@@ -253,7 +264,7 @@ def map_func(args, ctx):
                                 else:
                                    for w in range(list_length_first):
                                        if w!=i:
-                                         if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.92:
+                                         if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.90:
                                             index=index-1
                                    info_order[i][j]=index
 
@@ -270,6 +281,7 @@ def map_func(args, ctx):
                                     if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
                                 if sum(mark_list)>=list_length_first-1:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                    print("放入！------------",batch_ys[i][0])
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
                             if list_length_first>7:
@@ -278,7 +290,8 @@ def map_func(args, ctx):
                                    if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
                                if sum(mark_list)>=list_length_first-1:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
-                                   results.append(batch_ys[i][0])
+                                   print("放入！------------")
+                                   results.append(batch_ys[i][0],batch_ys[i][0])
 
                             else:#如果样本点少于等于3个
                                mark_list=[]
@@ -286,7 +299,8 @@ def map_func(args, ctx):
                                    if info_order[i][j]==list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
 
-                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.55:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.50:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   print("放入！------------",batch_ys[i][0])
                                    results.append(batch_ys[i][0])
 
                         num_lack=total_length-results.__len__()

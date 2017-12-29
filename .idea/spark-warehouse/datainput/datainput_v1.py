@@ -134,7 +134,7 @@ if False:
 #单个本地文件上传
    local_to_hdfs(hdfs_path=hdfs_dir,addrs="sjfx1",port="50070",local_filename=local_dir+local_to_hdfs_filename,file_hdfsname=file_hdfsname)
 
-if True:
+if False:
 #整个本地文件上传
    local_dir_to_hdfs(hdfs_path=hdfs_dir1,addrs="sjfx1",port="50070",local_filedir=local_dir1)
 

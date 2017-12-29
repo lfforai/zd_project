@@ -124,7 +124,32 @@ y= random.rand(10240, 10240)
 #     z= np.dot(x, y)
 # z.asnumpy()
 # print('time: {:.3f}.'.format(time.time()-st))
-b="afa|aad|afdas"
-print(b.count("|"))
-c=b.split("|")
-print(c)
+
+import numpy as np
+import matplotlib.pyplot as plt
+x=np.linspace(0,2*np.pi,50)
+wave=np.cos(x)
+transformed=np.fft.fft(wave) #傅里叶变换
+print(transformed)
+# plt.plot(transformed)
+# plt.show()
+
+def fft(xx,N):
+    rex=np.zeros(N)
+    imx=np.zeros(N)
+    pi=3.1415926
+
+    for k in range(N):
+        for  i in range(N):
+            rex[k]=rex[k]+xx[i]*np.cos(2*pi*k*i/N)
+            imx[k]=imx[k]+xx[i]*np.sin(2*pi*k*i/N)
+    return rex,imx
+a,b=fft(wave,wave.size)
+print(a)
+print(b)
+w=list([1,3,23,23,2,5])
+print(w.__len__())
+print(w[0:int(w.__len__()/2)])
+
+
+
