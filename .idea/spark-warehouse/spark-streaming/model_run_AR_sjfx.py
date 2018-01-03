@@ -112,7 +112,7 @@ cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/","/
 # exit()
 sc.stop()
 #准备inference用数据集
-cz_FOW_inference=list.copy(cz_FQW)
+# cz_FOW_inference=list.copy(cz_FQW)
 
 
 def AR_model_start(sc,args,spark_worker_num,dataRDD,rdd_count,name):
@@ -1070,7 +1070,7 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
     #.map(lambda x:str(x).split(",")). \
     # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_2.txt")
+rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_8.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

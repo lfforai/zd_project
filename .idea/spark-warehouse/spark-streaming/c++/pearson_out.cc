@@ -12,6 +12,7 @@ REGISTER_OP("PearsonOut")
            .Input("pearson_x_op: float")
            .Input("pearson_y_op: float")
            .Input("pearson_shape: float")
+           .Input("model_type: float") //1欧式距离
            .Output("pearson_op_out: float");
 
 using namespace tensorflow;
@@ -55,6 +56,19 @@ class PearsonOutOp : public OpKernel {
 	return sumofab;
   }
 
+  //1 欧式距离Eucledian Distance
+  float Eucledian_run(const Tensor& y,const Tensor& x)
+   {auto x_f=x.flat<float>();
+    auto y_f=y.flat<float>();
+    long lenght=x_f.size();
+    //求和
+	float result=0;
+	for(int i=0;i<lenght;i++)
+		 result=result+pow(x_f(i)-y_f(i),2);
+    return result;
+    }
+
+  //2 Pearson Distance
   float Pearson_run(const Tensor& y,const Tensor& x)
   {auto x_f=x.flat<float>();
    auto y_f=y.flat<float>();
@@ -74,6 +88,43 @@ class PearsonOutOp : public OpKernel {
    return result;
    }
 
+  //3 Manhattan Distance
+  float Manhattan_run(const Tensor& y,const Tensor& x)
+   {auto x_f=x.flat<float>();
+    auto y_f=y.flat<float>();
+    long lenght=x_f.size();
+    //求和
+	float result=0;
+	for(int i=0;i<lenght;i++)
+		 result=result+abs(x_f(i)-y_f(i));
+    return result;
+    }
+
+  //4 Cosine Distance 余旋距离
+  float Cosine_run(const Tensor& y,const Tensor& x)
+   {auto x_f=x.flat<float>();
+    auto y_f=y.flat<float>();
+    long lenght=x_f.size();
+    //求和
+	float result=0;
+
+	float temp1=0.0;
+	for(int i=0;i<lenght;i++)
+		temp1=temp1+pow(x_f(i),2);
+	temp1=pow(temp1,0.5);
+
+	float temp2=0.0;
+	for(int i=0;i<lenght;i++)
+        temp2=temp2+pow(y_f(i),2);
+	temp2=pow(temp2,0.5);
+
+	float temp3=0.0;
+	for(int i=0;i<lenght;i++)
+        temp3=temp3+y_f(i)*x_f(i);
+	result=temp3/(temp2*temp1);
+    return result;
+    }
+
   void Compute(OpKernelContext* context) override {
 	// Check that preserve_index is positive
 	//	OP_REQUIRES(context, p_value_down_N <= 1.0,
@@ -83,11 +134,19 @@ class PearsonOutOp : public OpKernel {
     const Tensor& input_x = context->input(0);
     const Tensor& input_y = context->input(1);
     const Tensor& input_shape=context->input(2);
+    const Tensor& modle_type=context->input(3);
     // Create an output tensor
     Tensor* output_tensor = NULL;
     OP_REQUIRES_OK(context, context->allocate_output(0,input_shape.shape(),&output_tensor));
     auto output_flat = output_tensor->flat<float>();
-    output_flat(0)=Pearson_run(input_x,input_y);
+    auto modle_type_f=modle_type.flat<float>();
+    switch(int(modle_type_f(0)))
+        {case 1: {output_flat(0)=Eucledian_run(input_x,input_y);break;}
+         case 2: {output_flat(0)=Pearson_run(input_x,input_y);break;}
+         case 3: {output_flat(0)=Manhattan_run(input_x,input_y);break;}
+         case 4: {output_flat(0)=Cosine_run(input_x,input_y);break;}
+         default: break;
+        }
   }
 //  private:
 };

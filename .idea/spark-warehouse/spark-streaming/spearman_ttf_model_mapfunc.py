@@ -225,12 +225,12 @@ def map_func(args, ctx):
                             # total_max=(min_r+min_i)/2
 
                             for i in [[float(e.real),float(e.imag)] for e in rezult]:
-                                if np.abs(i[0])<0.1:
+                                if np.abs(i[0])<0.05:
                                     ttf.append(0)
                                 else:
                                     ttf.append(i[0])
 
-                                if np.abs(i[1])<0.1:
+                                if np.abs(i[1])<0.05:
                                     ttf.append(0)
                                 else:
                                     ttf.append(i[1])
@@ -242,11 +242,10 @@ def map_func(args, ctx):
                             # yu=x_list.size%len
                             results=[]
                             for i in range(pitch):
-                                results.append(np.average(x_list[i:i*pitch+pitch]))
+                                results.append(np.average(x_list[i:i*len+len]))
                             return np.array(results)
 
-                        batch_ys=[[e[0],ttf_k(smooth(e[1],10))] for e in batch_ys]
-                        print("ok")
+                        batch_ys=[[e[0],ttf_k(smooth(e[1],6))] for e in batch_ys]
 
                         with tf.Session() as sess:
                             for i in range(list_length_first):
@@ -280,7 +279,7 @@ def map_func(args, ctx):
                                 for j in range(list_length_first):
                                     if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>=list_length_first-1 and abs(sum(batch_ys[i][1]))>5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                if sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     print("放入！------------",batch_ys[i][0])
                                     results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
                         else:
@@ -289,7 +288,7 @@ def map_func(args, ctx):
                                for j in range(list_length_first):
                                    if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>=list_length_first-1 and abs(sum(batch_ys[i][1]))>5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    print("放入！------------",batch_ys[i][0])
                                    results.append(batch_ys[i][0])
 
@@ -299,7 +298,7 @@ def map_func(args, ctx):
                                    if info_order[i][j]==list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
 
-                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.50 and abs(sum(batch_ys[i][1]))>5:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.3 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    print("放入！------------",batch_ys[i][0])
                                    results.append(batch_ys[i][0])
 
