@@ -124,15 +124,46 @@ y= random.rand(10240, 10240)
 #     z= np.dot(x, y)
 # z.asnumpy()
 # print('time: {:.3f}.'.format(time.time()-st))
+def calcMean(x,y):
+    sum_x = sum(x)
+    sum_y = sum(y)
+    n = len(x)
+    x_mean = float(sum_x+0.0)/n
+    y_mean = float(sum_y+0.0)/n
+    return x_mean,y_mean
+
+def calcPearson(x,y):
+    x_mean,y_mean = calcMean(x,y)   #计算x,y向量平均值
+    n = len(x)
+    sumTop = 0.0
+    sumBottom = 0.0
+    x_pow = 0.0
+    y_pow = 0.0
+    for i in range(n):
+        sumTop += (x[i]-x_mean)*(y[i]-y_mean)
+    for i in range(n):
+        x_pow += np.power(x[i]-x_mean,2)
+    for i in range(n):
+        y_pow += np.power(y[i]-y_mean,2)
+    sumBottom = np.sqrt(x_pow*y_pow)
+    p = sumTop/sumBottom
+    return p
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 x=np.linspace(0,2*np.pi,50)
 wave=np.cos(x)
+wave1=np.sin(x)
 transformed=np.fft.fft(wave) #傅里叶变换
+transformed1=np.fft.fft(wave1) #傅里叶变换
 print(transformed)
-# plt.plot(transformed)
-# plt.show()
+print(transformed1)
+plt.plot(transformed.real)
+plt.plot(transformed1.real)
+plt.show()
+print(calcPearson(transformed.real,transformed1.real))
+exit()
 
 def fft(xx,N):
     rex=np.zeros(N)

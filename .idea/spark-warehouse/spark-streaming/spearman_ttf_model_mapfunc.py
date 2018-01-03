@@ -207,6 +207,7 @@ def map_func(args, ctx):
 
                     if  list_length_first>2:#如果对比的源点数据少于3个无法进行判别
                         info_N=np.zeros([list_length_first,list_length_first])
+                        info_distance=np.zeros([list_length_first,list_length_first])
 
                         pearson_out_module = tf.load_op_library('/tensorflow_user_lib/pearson_out.so')
                         temp_shape=tf.zeros([1])#传递shape的参数
@@ -235,6 +236,7 @@ def map_func(args, ctx):
                                 else:
                                     ttf.append(i[1])
                             return np.asarray(ttf[0:int(ttf.__len__()/2)])
+                            # return np.asarray(ttf)
 
                         def smooth(x,len):
                             x_list=np.array(x)
@@ -245,60 +247,115 @@ def map_func(args, ctx):
                                 results.append(np.average(x_list[i:i*len+len]))
                             return np.array(results)
 
-                        batch_ys=[[e[0],ttf_k(smooth(e[1],6))] for e in batch_ys]
+                        batch_ys=[[e[0],smooth(ttf_k(e[1]),10)] for e in batch_ys]
 
+                        #求最大的最小值和最小的最大值，用于判断是否输出为异常
+                        batch_max=[[e[0],max(abs(e[1]))] for e in batch_ys]
+                        batch_max_out=[]
+                        for max_i in range(batch_max.__len__()):
+                            max_avr=-1
+                            for max_j in range(batch_max.__len__()):
+                                if max_i!=max_j:
+                                     value=batch_max[max_i][1]/batch_max[max_j][1]
+                                     if max_avr<0 or value<max_avr:
+                                        max_avr=value
+                            batch_max_out.append(max_avr)
+
+                        avg_var_max=np.average(np.array(batch_max_out))#均值
+                        ad_var_max=np.std(np.array(batch_max_out))#标准差
+
+                        print("max:======", batch_max_out)
+                        print("max异常值范围:======",avg_var_max-1.8*ad_var_max,avg_var_max+1.8*ad_var_max)
                         with tf.Session() as sess:
                             for i in range(list_length_first):
                                 for j in range(list_length_first):
                                     if(i!=j):
                                       info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape),np.array([2.0],dtype=float)))
                                       print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_N[i][j]))
+                                      info_distance[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape),np.array([1.0],dtype=float)))
+                                      print("distance:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_distance[i][j]))
                         sess.close()
+
+                        #计算2倍标准差之内的点
+                        avg_list=[]
+                        for i in range(list_length_first):
+                            for j in range(list_length_first):
+                                if j>i:
+                                   avg_list.append(info_distance[i][j])
+
+                        avg_var=np.average(np.array(avg_list))#均值
+                        ad_var=np.std(np.array(avg_list))#标准差
+
                         info_order=np.zeros([list_length_first,list_length_first])#计算相关系数的排序，越小位数越大
+                        info_order_distance=np.zeros([list_length_first,list_length_first])
+
                         for i in range(list_length_first):
                             for j in range(list_length_first):
                                 index=list_length_first
+                                index_distance=list_length_first
                                 if j==i:
                                    info_order[i][j]=-1
+                                   info_order_distance[i][j]=-1
                                 else:
                                    for w in range(list_length_first):
                                        if w!=i:
                                          if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.90:
                                             index=index-1
+                                         if info_distance[i][j]<info_distance[w][j]:
+                                            index_distance=index_distance-1
                                    info_order[i][j]=index
+                                   info_order_distance[i][j]=index_distance
 
-                        # print("输出order！====：")
-                        # for i in range(list_length_first):
-                        #     for j in range(list_length_first):
-                        #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
+                        print("输出order！====：")
+                        for i in range(list_length_first):
+                            for j in range(list_length_first):
+                                print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
+                                print("order_distance:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order_distance[i][j]))
 
                         #属于异常值的规则
                         if list_length_first>=5 and list_length_first<=7:
                             for i in range(list_length_first):
                                 mark_list=[]
+                                mark_list_distance=[]
                                 for j in range(list_length_first):
-                                    if info_order[i][j]>=list_length_first-1:
+                                    if info_order[i][j]>=list_length_first:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                if sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                    if info_order_distance[i][j]>=list_length_first:
+                                       mark_list_distance.append(1)#相关性排在倒数1位以内
+
+                                print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
+                                self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                                if (sum(mark_list)>=list_length_first-1 or (batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max)) and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                     print("放入！------------",batch_ys[i][0])
-                                    results.append(batch_ys[i][0])                                    #4分之3以上怀疑为异常点
+                                    results.append(batch_ys[i][0])
+                                    #4分之3以上怀疑为异常点
+                                    # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
+                                    #                                                    )))
                         else:
                             if list_length_first>7:
                                mark_list=[]
+                               mark_list_distance=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]>=list_length_first-1:
-                                       mark_list.append(1)#相关性排在倒数1位以内
-                               if sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   if info_order[i][j]>=list_length_first:
+                                      mark_list.append(1)#相关性排在倒数1位以内
+                                   if info_order_distance[i][j]>=list_length_first:
+                                      mark_list_distance.append(1)#相关性排在倒数1位以内
+                               print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
+                               if (sum(mark_list)>=list_length_first-1 or (batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max)) and abs(np.average(batch_ys[i][1]))>0.05:
+                                                           #如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    print("放入！------------",batch_ys[i][0])
                                    results.append(batch_ys[i][0])
 
                             else:#如果样本点少于等于3个
                                mark_list=[]
+                               mark_list_distance=[]
                                for j in range(list_length_first):
-                                   if info_order[i][j]==list_length_first-1:
-                                       mark_list.append(1)#相关性排在倒数1位以内
-
-                               if sum(mark_list)>=list_length_first-1 and max(info_N[i])<=0.3 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   if info_order[i][j]==list_length_first:
+                                      mark_list.append(1)#相关性排在倒数1位以内
+                                   if info_order_distance[i][j]>=list_length_first:
+                                      mark_list_distance.append(1)#相关性排在倒数1位以内
+                               print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
+                               if (sum(mark_list)>=list_length_first-1 or (batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max)) and max(info_N[i])<=0.3 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                    print("放入！------------",batch_ys[i][0])
                                    results.append(batch_ys[i][0])
 
