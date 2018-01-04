@@ -371,7 +371,7 @@ def map_func(args, ctx):
                                     print("a的均值：========",avg_jf)
                                     av_jf=np.average(np.array(avg_jf))#均值
                                     ad_jf=np.std(np.array(avg_jf))#标准差
-                                    if avg_jf[i]>av_jf+1.4*ad_jf or avg_jf[i]<av_jf-1.4*ad_jf:
+                                    if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                     #4分之3以上怀疑为异常点
@@ -434,7 +434,7 @@ def map_func(args, ctx):
                                    print("a的均值：========",avg_jf)
                                    av_jf=np.average(np.array(avg_jf))#均值
                                    ad_jf=np.std(np.array(avg_jf))#标准差
-                                   if avg_jf[i]>av_jf+1.4*ad_jf or avg_jf[i]<av_jf-1.4*ad_jf:
+                                   if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                        #4分之3以上怀疑为异常点
@@ -497,7 +497,7 @@ def map_func(args, ctx):
                                    print("a的均值：========",avg_jf)
                                    av_jf=np.average(np.array(avg_jf))#均值
                                    ad_jf=np.std(np.array(avg_jf))#标准差
-                                   if avg_jf[i]>av_jf+1.4*ad_jf or avg_jf[i]<av_jf-1.4*ad_jf:
+                                   if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                        #4分之3以上怀疑为异常点
