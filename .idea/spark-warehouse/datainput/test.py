@@ -124,6 +124,13 @@ y= random.rand(10240, 10240)
 #     z= np.dot(x, y)
 # z.asnumpy()
 # print('time: {:.3f}.'.format(time.time()-st))
+a=[1,2,3,4]
+b=[1,2,3,4]
+print(np.dot(np.transpose(a),b))
+a=[[1,0,3,4],[2,3,4,5]]
+print(np.average([e for e in np.array(a)[:,2] if e>0]))
+exit()
+
 def calcMean(x,y):
     sum_x = sum(x)
     sum_y = sum(y)
@@ -181,6 +188,5 @@ print(b)
 w=list([1,3,23,23,2,5])
 print(w.__len__())
 print(w[0:int(w.__len__()/2)])
-
 
 
