@@ -287,39 +287,38 @@ def map_func(args, ctx):
                                               b_i=batch_ys[j][1]
                                       info_N[i][j]= sess.run(pearson_out_module.pearson_out(a_i,b_i,sess.run(temp_shape),np.array([2.0],dtype=float)))
                                       print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_N[i][j]))
-                                      info_distance[i][j]= sess.run(pearson_out_module.pearson_out(a_i,b_i,sess.run(temp_shape),np.array([1.0],dtype=float)))
-                                      print("distance:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_distance[i][j]))
+                                      # info_distance[i][j]= sess.run(pearson_out_module.pearson_out(a_i,b_i,sess.run(temp_shape),np.array([1.0],dtype=float)))
+                                      # print("distance:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_distance[i][j]))
                         sess.close()
 
                         #计算2倍标准差之内的点
-                        avg_list=[]
-                        for i in range(list_length_first):
-                            for j in range(list_length_first):
-                                if j>i:
-                                   avg_list.append(info_distance[i][j])
-
-                        avg_var=np.average(np.array(avg_list))#均值
-                        ad_var=np.std(np.array(avg_list))#标准差
-
+                        # avg_list=[]
+                        # for i in range(list_length_first):
+                        #     for j in range(list_length_first):
+                        #         if j>i:
+                        #            avg_list.append(info_distance[i][j])
+                        #
+                        # avg_var=np.average(np.array(avg_list))#均值
+                        # ad_var=np.std(np.array(avg_list))#标准差
+                        #
+                        # info_order_distance=np.zeros([list_length_first,list_length_first])
                         info_order=np.zeros([list_length_first,list_length_first])#计算相关系数的排序，越小位数越大
-                        info_order_distance=np.zeros([list_length_first,list_length_first])
-
                         for i in range(list_length_first):
                             for j in range(list_length_first):
                                 index=list_length_first
-                                index_distance=list_length_first
+                                # index_distance=list_length_first
                                 if j==i:
                                    info_order[i][j]=-1
-                                   info_order_distance[i][j]=-1
+                                   # info_order_distance[i][j]=-1
                                 else:
                                    for w in range(list_length_first):
                                        if w!=i:
                                          if info_N[i][j]>info_N[w][j] or info_N[i][j]>=0.90:
                                             index=index-1
-                                         if info_distance[i][j]<info_distance[w][j]:
-                                            index_distance=index_distance-1
+                                         # if info_distance[i][j]<info_distance[w][j]:
+                                         #    index_distance=index_distance-1
                                    info_order[i][j]=index
-                                   info_order_distance[i][j]=index_distance
+                                   # info_order_distance[i][j]=index_distance
 
                         # print("输出order！====：")
                         # for i in range(list_length_first):
@@ -335,11 +334,11 @@ def map_func(args, ctx):
                                 for j in range(list_length_first):
                                     if info_order[i][j]>=list_length_first:
                                        mark_list.append(1)#相关性排在倒数1位以内
-                                    if info_order_distance[i][j]>=list_length_first:
-                                       mark_list_distance.append(1)#相关性排在倒数1位以内
+                                    # if info_order_distance[i][j]>=list_length_first:
+                                    #    mark_list_distance.append(1)#相关性排在倒数1位以内
 
-                                print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
-                                self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                                print("每个的次序量=",batch_ys[i][0],sum(mark_list))
+                                # self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
 
                                 continue_N=0
                                 #相关系数检查结果不用重复判断直接判错
@@ -400,10 +399,10 @@ def map_func(args, ctx):
                                        for j in range(list_length_first):
                                            if info_order[i][j]>=list_length_first:
                                               mark_list.append(1)#相关性排在倒数1位以内
-                                           if info_order_distance[i][j]>=list_length_first:
-                                              mark_list_distance.append(1)#相关性排在倒数1位以内
-                                       print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
-                                       self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                                           # if info_order_distance[i][j]>=list_length_first:
+                                           #    mark_list_distance.append(1)#相关性排在倒数1位以内
+                                       print("每个的次序量=",batch_ys[i][0],sum(mark_list))
+                                       #self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
 
                                        continue_N=0
                                        #相关系数检查结果不用重复判断直接判错
@@ -464,10 +463,10 @@ def map_func(args, ctx):
                                    for j in range(list_length_first):
                                        if info_order[i][j]==list_length_first:
                                           mark_list.append(1)#相关性排在倒数1位以内
-                                       if info_order_distance[i][j]>=list_length_first:
-                                          mark_list_distance.append(1)#相关性排在倒数1位以内
-                                   print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
-                                   self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                                       # if info_order_distance[i][j]>=list_length_first:
+                                       #    mark_list_distance.append(1)#相关性排在倒数1位以内
+                                   print("每个的次序量=",batch_ys[i][0],sum(mark_list))
+                                   # self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
 
                                    continue_N=0
                                    #相关系数检查结果不用重复判断直接判错
