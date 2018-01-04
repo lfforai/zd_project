@@ -351,6 +351,7 @@ def map_func(args, ctx):
                                                 else:
                                                     if a_length>b_length:
                                                        a_jf=np.array(batch_ys[jf_i][1][0:b_length])
+                                                       a_length=a_jf.__len__()
                                                        jf_d=np.dot(np.transpose(a_jf),a_jf)
                                                     else:
                                                         pass
@@ -413,6 +414,7 @@ def map_func(args, ctx):
                                                else:
                                                    if a_length>b_length:
                                                        a_jf=np.array(batch_ys[jf_i][1][0:b_length])
+                                                       a_length=a_jf.__len__()
                                                        jf_d=np.dot(np.transpose(a_jf),a_jf)
                                                    else:
                                                        pass
@@ -475,6 +477,7 @@ def map_func(args, ctx):
                                                else:
                                                    if a_length>b_length:
                                                        a_jf=np.array(batch_ys[jf_i][1][0:b_length])
+                                                       a_length=a_jf.__len__()
                                                        jf_d=np.dot(np.transpose(a_jf),a_jf)
                                                    else:
                                                        pass
