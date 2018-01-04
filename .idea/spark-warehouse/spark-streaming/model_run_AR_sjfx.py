@@ -67,7 +67,7 @@ if_AR_mode_inference=0
 if_efk_mode_train=0
 if_efk_mode_inference=0
 if_cluster_mode_inference=0
-if_spear_mode_inference=0
+if_spear_mode_inference=1
 
 # print("1111111111111111111111111111111111")
 # exit()
@@ -881,6 +881,7 @@ if if_spear_mode_inference==1:
                          break
 
                 if bool==False and bool2==True:
+                    # and bool2==True:
                     sc=SparkContext(conf=conf)
                     #按大小分配数量
                     mark_list=[];
@@ -938,6 +939,7 @@ if if_spear_mode_inference==1:
             break
 
     if bool==False and bool2==True:
+        #and bool2==True:
         sc=SparkContext(conf=conf)
         mark_list=[];
         for mm  in range(list_tmp.__len__()):
@@ -1085,7 +1087,7 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
     #.map(lambda x:str(x).split(",")). \
     # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_13.txt")
+rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_14.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

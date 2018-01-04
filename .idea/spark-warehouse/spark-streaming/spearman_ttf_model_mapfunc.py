@@ -266,13 +266,28 @@ def map_func(args, ctx):
 
                         print("max:======", batch_max_out)
                         print("max异常值范围:======",avg_var_max-1.8*ad_var_max,avg_var_max+1.8*ad_var_max)
+                        a_i=0
+                        b_i=0
                         with tf.Session() as sess:
                             for i in range(list_length_first):
+                                batch_len_a=batch_ys[i][1].__len__()
                                 for j in range(list_length_first):
                                     if(i!=j):
-                                      info_N[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape),np.array([2.0],dtype=float)))
+                                      batch_len_b=batch_ys[j][1].__len__()
+                                      if batch_len_a>batch_len_b:
+                                         a_i=np.array(batch_ys[i][1][0:batch_len_b])
+                                         batch_len_a=batch_len_b
+                                         b_i=batch_ys[j][1]
+                                      else:
+                                          if batch_len_a<batch_len_b:
+                                             b_i=np.array(batch_ys[j][1][0:batch_len_a])
+                                             a_i=batch_ys[i][1]
+                                          else:
+                                              a_i=batch_ys[i][1]
+                                              b_i=batch_ys[j][1]
+                                      info_N[i][j]= sess.run(pearson_out_module.pearson_out(a_i,b_i,sess.run(temp_shape),np.array([2.0],dtype=float)))
                                       print("one:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_N[i][j]))
-                                      info_distance[i][j]= sess.run(pearson_out_module.pearson_out(batch_ys[i][1],batch_ys[j][1],sess.run(temp_shape),np.array([1.0],dtype=float)))
+                                      info_distance[i][j]= sess.run(pearson_out_module.pearson_out(a_i,b_i,sess.run(temp_shape),np.array([1.0],dtype=float)))
                                       print("distance:=%s,two=%s,r=%f"%(batch_ys[i][0],batch_ys[j][0],info_distance[i][j]))
                         sess.close()
 
@@ -314,7 +329,7 @@ def map_func(args, ctx):
 
                         #属于异常值的规则
                         if list_length_first>=5 and list_length_first<=7:
-                            for i in range(list_length_first):
+                           for i in range(list_length_first):
                                 mark_list=[]
                                 mark_list_distance=[]
                                 for j in range(list_length_first):
@@ -379,130 +394,132 @@ def map_func(args, ctx):
                                     #                                                    )))
                         else:
                             if list_length_first>7:
-                               mark_list=[]
-                               mark_list_distance=[]
-                               for j in range(list_length_first):
-                                   if info_order[i][j]>=list_length_first:
-                                      mark_list.append(1)#相关性排在倒数1位以内
-                                   if info_order_distance[i][j]>=list_length_first:
-                                      mark_list_distance.append(1)#相关性排在倒数1位以内
-                               print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
-                               self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                                    for i in range(list_length_first):
+                                       mark_list=[]
+                                       mark_list_distance=[]
+                                       for j in range(list_length_first):
+                                           if info_order[i][j]>=list_length_first:
+                                              mark_list.append(1)#相关性排在倒数1位以内
+                                           if info_order_distance[i][j]>=list_length_first:
+                                              mark_list_distance.append(1)#相关性排在倒数1位以内
+                                       print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
+                                       self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
 
-                               continue_N=0
-                               #相关系数检查结果不用重复判断直接判错
-                               if  sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
-                                   results.append(batch_ys[i][0])
-                                   print("成功放入！------------",batch_ys[i][0])
-                                   continue_N=1
+                                       continue_N=0
+                                       #相关系数检查结果不用重复判断直接判错
+                                       if  sum(mark_list)>=list_length_first-2 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                           results.append(batch_ys[i][0])
+                                           print("成功放入！------------",batch_ys[i][0])
+                                           continue_N=1
 
-                               if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
-                                   #进行积分重合度测试判断是否最后放入到异常数据
-                                   print("放入检查！------------",batch_ys[i][0])
-                                   #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
-                                   jf_list=np.zeros([list_length_first,list_length_first])
-                                   for jf_i in range(list_length_first):
-                                       a_jf=np.array(batch_ys[jf_i][1])
-                                       jf_d=np.dot(np.transpose(a_jf),a_jf)
-                                       a_length=a_jf.__len__()
-                                       for jf_j in range(list_length_first):#用a*a_jf去逼近b_jf
-                                           if jf_j!=jf_i:
-                                               b_jf=np.array(batch_ys[jf_j][1])
-                                               b_length=b_jf.__len__()
-                                               if a_length<b_length:
-                                                   b_jf=np.array(batch_ys[jf_j][1][0:a_length])
-                                               else:
-                                                   if a_length>b_length:
-                                                       a_jf=np.array(batch_ys[jf_i][1][0:b_length])
-                                                       a_length=a_jf.__len__()
-                                                       jf_d=np.dot(np.transpose(a_jf),a_jf)
+                                       if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                           #进行积分重合度测试判断是否最后放入到异常数据
+                                           print("放入检查！------------",batch_ys[i][0])
+                                           #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
+                                           jf_list=np.zeros([list_length_first,list_length_first])
+                                           for jf_i in range(list_length_first):
+                                               a_jf=np.array(batch_ys[jf_i][1])
+                                               jf_d=np.dot(np.transpose(a_jf),a_jf)
+                                               a_length=a_jf.__len__()
+                                               for jf_j in range(list_length_first):#用a*a_jf去逼近b_jf
+                                                   if jf_j!=jf_i:
+                                                       b_jf=np.array(batch_ys[jf_j][1])
+                                                       b_length=b_jf.__len__()
+                                                       if a_length<b_length:
+                                                           b_jf=np.array(batch_ys[jf_j][1][0:a_length])
+                                                       else:
+                                                           if a_length>b_length:
+                                                               a_jf=np.array(batch_ys[jf_i][1][0:b_length])
+                                                               a_length=a_jf.__len__()
+                                                               jf_d=np.dot(np.transpose(a_jf),a_jf)
+                                                           else:
+                                                               pass
+                                                       if abs(jf_d)>0.01:
+                                                           jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/jf_d
+                                                       else:
+                                                           jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/(0.01)
                                                    else:
-                                                       pass
-                                               if abs(jf_d)>0.01:
-                                                   jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/jf_d
-                                               else:
-                                                   jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/(0.01)
-                                           else:
-                                               jf_list[jf_i][jf_j]=0
+                                                       jf_list[jf_i][jf_j]=0
 
-                                   print("jf_list[jf_i][jf_j]==",jf_list)
-                                   #按列求均值
-                                   avg_jf=[]
-                                   jf_list=np.array(jf_list)
-                                   for jf_i in range(list_length_first):
-                                       avg_jf.append(np.average(np.array([e for e in np.array(jf_list)[:,jf_i] if e!=0])))
-                                   print("a的均值：========",avg_jf)
-                                   av_jf=np.average(np.array(avg_jf))#均值
-                                   ad_jf=np.std(np.array(avg_jf))#标准差
-                                   if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
-                                       results.append(batch_ys[i][0])
-                                       print("成功放入！------------",batch_ys[i][0])
-                                       #4分之3以上怀疑为异常点
-                                       # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
-                                       #                                                    )))
+                                           print("jf_list[jf_i][jf_j]==",jf_list)
+                                           #按列求均值
+                                           avg_jf=[]
+                                           jf_list=np.array(jf_list)
+                                           for jf_i in range(list_length_first):
+                                               avg_jf.append(np.average(np.array([e for e in np.array(jf_list)[:,jf_i] if e!=0])))
+                                           print("a的均值：========",avg_jf)
+                                           av_jf=np.average(np.array(avg_jf))#均值
+                                           ad_jf=np.std(np.array(avg_jf))#标准差
+                                           if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                               results.append(batch_ys[i][0])
+                                               print("成功放入！------------",batch_ys[i][0])
+                                               #4分之3以上怀疑为异常点
+                                               # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
+                                               #                                                    )))
 
                             else:#如果样本点少于等于3个
-                               mark_list=[]
-                               mark_list_distance=[]
-                               for j in range(list_length_first):
-                                   if info_order[i][j]==list_length_first:
-                                      mark_list.append(1)#相关性排在倒数1位以内
-                                   if info_order_distance[i][j]>=list_length_first:
-                                      mark_list_distance.append(1)#相关性排在倒数1位以内
-                               print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
-                               self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
+                               for i in range(list_length_first):
+                                   mark_list=[]
+                                   mark_list_distance=[]
+                                   for j in range(list_length_first):
+                                       if info_order[i][j]==list_length_first:
+                                          mark_list.append(1)#相关性排在倒数1位以内
+                                       if info_order_distance[i][j]>=list_length_first:
+                                          mark_list_distance.append(1)#相关性排在倒数1位以内
+                                   print("每个的次序量=",batch_ys[i][0],sum(mark_list),sum(mark_list_distance))
+                                   self_distance=np.average([e for e in info_order_distance[i] if e!=-1])
 
-                               continue_N=0
-                               #相关系数检查结果不用重复判断直接判错
-                               if  sum(mark_list)>=list_length_first-1 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
-                                   results.append(batch_ys[i][0])
-                                   print("成功放入！------------",batch_ys[i][0])
-                                   continue_N=1
-
-                               if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
-                                   #进行积分重合度测试判断是否最后放入到异常数据
-                                   print("放入检查！------------",batch_ys[i][0])
-                                   #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
-                                   jf_list=np.zeros([list_length_first,list_length_first])
-                                   for jf_i in range(list_length_first):
-                                       a_jf=np.array(batch_ys[jf_i][1])
-                                       jf_d=np.dot(np.transpose(a_jf),a_jf)
-                                       a_length=a_jf.__len__()
-                                       for jf_j in range(list_length_first):#用a*a_jf去逼近b_jf
-                                           if jf_j!=jf_i:
-                                               b_jf=np.array(batch_ys[jf_j][1])
-                                               b_length=b_jf.__len__()
-                                               if a_length<b_length:
-                                                   b_jf=np.array(batch_ys[jf_j][1][0:a_length])
-                                               else:
-                                                   if a_length>b_length:
-                                                       a_jf=np.array(batch_ys[jf_i][1][0:b_length])
-                                                       a_length=a_jf.__len__()
-                                                       jf_d=np.dot(np.transpose(a_jf),a_jf)
-                                                   else:
-                                                       pass
-                                               if abs(jf_d)>0.01:
-                                                   jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/jf_d
-                                               else:
-                                                   jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/(0.01)
-                                           else:
-                                               jf_list[jf_i][jf_j]=0
-
-                                   print("jf_list[jf_i][jf_j]==",jf_list)
-                                   #按列求均值
-                                   avg_jf=[]
-                                   jf_list=np.array(jf_list)
-                                   for jf_i in range(list_length_first):
-                                       avg_jf.append(np.average(np.array([e for e in np.array(jf_list)[:,jf_i] if e!=0])))
-                                   print("a的均值：========",avg_jf)
-                                   av_jf=np.average(np.array(avg_jf))#均值
-                                   ad_jf=np.std(np.array(avg_jf))#标准差
-                                   if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                   continue_N=0
+                                   #相关系数检查结果不用重复判断直接判错
+                                   if  sum(mark_list)>=list_length_first-1 and max(info_N[i])<0.30 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
-                                       #4分之3以上怀疑为异常点
-                                       # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
-                                       #                                                    )))
+                                       continue_N=1
+
+                                   if  continue_N==0 and batch_max_out[i]>avg_var_max+2.0*ad_var_max or batch_max_out[i]<avg_var_max-2.0*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                       #进行积分重合度测试判断是否最后放入到异常数据
+                                       print("放入检查！------------",batch_ys[i][0])
+                                       #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
+                                       jf_list=np.zeros([list_length_first,list_length_first])
+                                       for jf_i in range(list_length_first):
+                                           a_jf=np.array(batch_ys[jf_i][1])
+                                           jf_d=np.dot(np.transpose(a_jf),a_jf)
+                                           a_length=a_jf.__len__()
+                                           for jf_j in range(list_length_first):#用a*a_jf去逼近b_jf
+                                               if jf_j!=jf_i:
+                                                   b_jf=np.array(batch_ys[jf_j][1])
+                                                   b_length=b_jf.__len__()
+                                                   if a_length<b_length:
+                                                       b_jf=np.array(batch_ys[jf_j][1][0:a_length])
+                                                   else:
+                                                       if a_length>b_length:
+                                                           a_jf=np.array(batch_ys[jf_i][1][0:b_length])
+                                                           a_length=a_jf.__len__()
+                                                           jf_d=np.dot(np.transpose(a_jf),a_jf)
+                                                       else:
+                                                           pass
+                                                   if abs(jf_d)>0.01:
+                                                       jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/jf_d
+                                                   else:
+                                                       jf_list[jf_i][jf_j]=np.dot(np.transpose(a_jf),b_jf)/(0.01)
+                                               else:
+                                                   jf_list[jf_i][jf_j]=0
+
+                                       print("jf_list[jf_i][jf_j]==",jf_list)
+                                       #按列求均值
+                                       avg_jf=[]
+                                       jf_list=np.array(jf_list)
+                                       for jf_i in range(list_length_first):
+                                           avg_jf.append(np.average(np.array([e for e in np.array(jf_list)[:,jf_i] if e!=0])))
+                                       print("a的均值：========",avg_jf)
+                                       av_jf=np.average(np.array(avg_jf))#均值
+                                       ad_jf=np.std(np.array(avg_jf))#标准差
+                                       if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                           results.append(batch_ys[i][0])
+                                           print("成功放入！------------",batch_ys[i][0])
+                                           #4分之3以上怀疑为异常点
+                                           # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
+                                           #                                                    )))
 
                         num_lack=total_length-results.__len__()
                         if num_lack>0:
