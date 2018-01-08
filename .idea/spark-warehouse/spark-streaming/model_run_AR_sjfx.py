@@ -873,14 +873,14 @@ if if_spear_mode_inference==1:
                                       +str(list_tmp[1][0])+"|"+str(list_tmp[1][1])+
                                       "||"+str(list_tmp[2][0])+"|"+str(list_tmp[2][1])+
                                       "||"+str(list_tmp[3][0])+"|"+str(list_tmp[3][1])+".txt")
-                bool2=False
-                for dd in range(list_tmp.__len__()):
-                    if str(list_tmp[dd]).__contains__("JJJJ"):
-                         bool2=True
-                         print("aaa=====",list_tmp)
-                         break
+                # bool2=False
+                # for dd in range(list_tmp.__len__()):
+                #     if str(list_tmp[dd]).__contains__("JJJJ"):
+                #          bool2=True
+                #          print("aaa=====",list_tmp)
+                #          break
 
-                if bool==False and bool2==True:
+                if bool==False:
                     # and bool2==True:
                     sc=SparkContext(conf=conf)
                     #按大小分配数量
@@ -931,14 +931,14 @@ if if_spear_mode_inference==1:
     print("last done：")#处理最后一组
     bool=fs_pyhdfs.exists("/rezult/"+"spearman_"+str(list_tmp[0][0])+"|"+str(list_tmp[0][1])+".txt")
 
-    bool2=False
-    for dd in range(list_tmp.__len__()):
-        if str(list_tmp[dd]).__contains__("JJJJ"):
-            bool2=True
-            print("aaa=====",list_tmp)
-            break
+    # bool2=False
+    # for dd in range(list_tmp.__len__()):
+    #     if str(list_tmp[dd]).__contains__("JJJJ"):
+    #         bool2=True
+    #         print("aaa=====",list_tmp)
+    #         break
 
-    if bool==False and bool2==True:
+    if bool==False:
         #and bool2==True:
         sc=SparkContext(conf=conf)
         mark_list=[];
@@ -1087,7 +1087,7 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
     #.map(lambda x:str(x).split(",")). \
     # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_spearman_15.txt")
+rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/test_new1.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

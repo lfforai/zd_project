@@ -264,7 +264,7 @@ def map_func(args, ctx):
                         avg_var_max=np.average(np.array(batch_max_out))#均值
                         ad_var_max=np.std(np.array(batch_max_out))#标准差
 
-                        print("max:======", batch_max_out)
+                        #print("max:======", batch_max_out)
                         print("max异常值范围:======",avg_var_max-1.8*ad_var_max,avg_var_max+1.8*ad_var_max)
                         a_i=0
                         b_i=0
@@ -306,6 +306,7 @@ def map_func(args, ctx):
                         for i in range(list_length_first):
                             for j in range(list_length_first):
                                 index=list_length_first
+                                # print("index:=",index)
                                 # index_distance=list_length_first
                                 if j==i:
                                    info_order[i][j]=-1
@@ -320,11 +321,11 @@ def map_func(args, ctx):
                                    info_order[i][j]=index
                                    # info_order_distance[i][j]=index_distance
 
-                        # print("输出order！====：")
-                        # for i in range(list_length_first):
-                        #     for j in range(list_length_first):
-                        #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
-                        #         print("order_distance:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order_distance[i][j]))
+                        print("输出order！====：")
+                        for i in range(list_length_first):
+                            for j in range(list_length_first):
+                                print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
+                                #print("order_distance:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order_distance[i][j]))
 
                         #属于异常值的规则
                         if list_length_first>=5 and list_length_first<=7:
@@ -332,7 +333,7 @@ def map_func(args, ctx):
                                 mark_list=[]
                                 mark_list_distance=[]
                                 for j in range(list_length_first):
-                                    if info_order[i][j]>=list_length_first:
+                                    if info_order[i][j]>=list_length_first-1:
                                        mark_list.append(1)#相关性排在倒数1位以内
                                     # if info_order_distance[i][j]>=list_length_first:
                                     #    mark_list_distance.append(1)#相关性排在倒数1位以内
@@ -385,7 +386,7 @@ def map_func(args, ctx):
                                     print("a的均值：========",avg_jf)
                                     av_jf=np.average(np.array(avg_jf))#均值
                                     ad_jf=np.std(np.array(avg_jf))#标准差
-                                    if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                    if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                     #4分之3以上怀疑为异常点
@@ -397,7 +398,7 @@ def map_func(args, ctx):
                                        mark_list=[]
                                        mark_list_distance=[]
                                        for j in range(list_length_first):
-                                           if info_order[i][j]>=list_length_first:
+                                           if info_order[i][j]>=list_length_first-1:
                                               mark_list.append(1)#相关性排在倒数1位以内
                                            # if info_order_distance[i][j]>=list_length_first:
                                            #    mark_list_distance.append(1)#相关性排在倒数1位以内
@@ -449,7 +450,7 @@ def map_func(args, ctx):
                                            print("a的均值：========",avg_jf)
                                            av_jf=np.average(np.array(avg_jf))#均值
                                            ad_jf=np.std(np.array(avg_jf))#标准差
-                                           if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                           if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
                                                results.append(batch_ys[i][0])
                                                print("成功放入！------------",batch_ys[i][0])
                                                #4分之3以上怀疑为异常点
@@ -461,7 +462,7 @@ def map_func(args, ctx):
                                    mark_list=[]
                                    mark_list_distance=[]
                                    for j in range(list_length_first):
-                                       if info_order[i][j]==list_length_first:
+                                       if info_order[i][j]>=list_length_first-1:
                                           mark_list.append(1)#相关性排在倒数1位以内
                                        # if info_order_distance[i][j]>=list_length_first:
                                        #    mark_list_distance.append(1)#相关性排在倒数1位以内
@@ -513,7 +514,7 @@ def map_func(args, ctx):
                                        print("a的均值：========",avg_jf)
                                        av_jf=np.average(np.array(avg_jf))#均值
                                        ad_jf=np.std(np.array(avg_jf))#标准差
-                                       if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
+                                       if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
                                            results.append(batch_ys[i][0])
                                            print("成功放入！------------",batch_ys[i][0])
                                            #4分之3以上怀疑为异常点
