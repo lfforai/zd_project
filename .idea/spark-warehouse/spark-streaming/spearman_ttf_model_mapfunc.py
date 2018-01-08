@@ -321,10 +321,10 @@ def map_func(args, ctx):
                                    info_order[i][j]=index
                                    # info_order_distance[i][j]=index_distance
 
-                        print("输出order！====：")
-                        for i in range(list_length_first):
-                            for j in range(list_length_first):
-                                print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
+                        # print("输出order！====：")
+                        # for i in range(list_length_first):
+                        #     for j in range(list_length_first):
+                        #         print("order:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order[i][j]))
                                 #print("order_distance:=%s,j=%d,r=%f"%(batch_ys[i][0],j,info_order_distance[i][j]))
 
                         #属于异常值的规则
