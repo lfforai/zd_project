@@ -184,6 +184,7 @@ def text2x_y(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/Poin
         else:
             dict_data.append(lines)
     row_num = len(dict_data)
+    row_num=100
     # print('this is all the data---' + str(dict))
     result=[]
     #循环读取每一行
@@ -224,17 +225,29 @@ x_len=list(result[0][0]).__len__()
 print("x_len:=",x_len)
 y_len=list(result[0][1]).__len__()
 print("y_len:=",y_len)
-batchSize=128
-img=tf.convert_to_tensor(np.array([e[0] for e in result]))
-label=tf.convert_to_tensor(np.array([e[1] for e in result]))
+batchSize=10
+print("aaaaa")
+
+img=tf.convert_to_tensor(np.array([e[0] for e in result]),dtype=tf.float32)
+# with tf.Session() as ses:
+#     print(img.get_shape())
+#     print(ses.run(img))
+# ses.close()
+label=tf.convert_to_tensor(np.array([e[1] for e in result]),dtype=tf.float32)
+# with tf.Session() as ses:
+#     print(label.get_shape())
+#     print(ses.run(label))
+# ses.close()
 
 #从python的np.array中获获取分批生成
 def batch_input(img,label, batchSize):
     min_after_dequeue = 1000
     capacity = min_after_dequeue+3*batchSize
+    print(capacity)
     # 预取图像和label并随机打乱，组成batch，此时tensor rank发生了变化，多了一个batch大小的维度
     exampleBatch,labelBatch = tf.train.shuffle_batch([img, label],batch_size=batchSize, capacity=capacity,
                                                      min_after_dequeue=min_after_dequeue)
+    print(capacity)
     return exampleBatch,labelBatch
 
 # define placeholder for inputs to network
@@ -242,22 +255,22 @@ xs = tf.placeholder(tf.float32, [None, x_len])
 ys = tf.placeholder(tf.float32, [None, y_len])
 
 with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
-    w1=tf.get_variable("w0", [20, 300])
-    b1=tf.get_variable("b0", [300])
-    w2=tf.get_variable("w1", [300, 150])
-    b2=tf.get_variable("b1", [150])
-    w3=tf.get_variable("w2", [150, 75])
-    b3=tf.get_variable("b2", [86])
+    w1=tf.get_variable("w1", [20, 300])
+    b1=tf.get_variable("b1", [300])
+    w2=tf.get_variable("w2", [300, 150])
+    b2=tf.get_variable("b2", [150])
+    w3=tf.get_variable("w3", [150, 86])
+    b3=tf.get_variable("b3", [86])
 
     #全链接神经网，l1=input×300+300, l2=300*150+150,l3=150*75+75
     def mlp(X,Y,n_maxouts=5):
         # construct learnable parameters within local scope
-        w1=tf.get_variable("w0", [X.get_shape()[1], 300], initializer=tf.random_normal_initializer())
-        b1=tf.get_variable("b0", [300], initializer=tf.constant_initializer(0.0))
-        w2=tf.get_variable("w1", [300, 150], initializer=tf.random_normal_initializer())
-        b2=tf.get_variable("b1", [150], initializer=tf.constant_initializer(0.0))
-        w3=tf.get_variable("w2", [150, Y.get_shape()[1]], initializer=tf.random_normal_initializer())
-        b3=tf.get_variable("b2", [Y.get_shape()[1]], initializer=tf.constant_initializer(0.0))
+        w1=tf.get_variable("w1", [X.get_shape()[1], 300], initializer=tf.random_normal_initializer())
+        b1=tf.get_variable("b1", [300], initializer=tf.constant_initializer(0.0))
+        w2=tf.get_variable("w2", [300, 150], initializer=tf.random_normal_initializer())
+        b2=tf.get_variable("b2", [150], initializer=tf.constant_initializer(0.0))
+        w3=tf.get_variable("w3", [150, Y.get_shape()[1]], initializer=tf.random_normal_initializer())
+        b3=tf.get_variable("b3", [Y.get_shape()[1]], initializer=tf.constant_initializer(0.0))
         #w4=tf.get_variable("w3", [75,output_dim], initializer=tf.random_normal_initializer())
         #b4=tf.get_variable("b3", [output_dim], initializer=tf.constant_initializer(0.0))
         # nn operators
@@ -284,16 +297,18 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
         # else:
         #     fc4=tf.matmul(fc3,w4)+b4
         return fc3, [w1,b1,w2,b2,w3,b3]
-
-    output=mlp(xs,ys)
+    print("-------------------------3")
+    output,var_vlaue=mlp(xs,ys)
+    print("-------------------------2")
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=ys))
-
+    print("-------------------------4")
     #计算预测数据与实际数据的差异,进行精度检测
     predict = tf.reshape(output, [-1, 2, d_l])
     max_idx_p = tf.argmax(predict, 2)
     max_idx_l = tf.argmax(tf.reshape(ys, [-1, 2, d_l]), 2)
     correct_pred = tf.equal(max_idx_p, max_idx_l)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    print("------------------------1-")
 
 # train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
     train_op = tf.train.AdagradOptimizer(0.01).minimize(loss)
@@ -308,7 +323,11 @@ with tf.Session(config=config) as sess:
     sess.run(init)
     # 迭代 1000 次学习，sess.run optimizer
     for step in range(2000):
+        print("-------------------------")
         x_data,y_data=batch_input(img,label,batchSize)
+        print(sess.run(x_data))
+        print(sess.run(y_data))
+
         # training train_step 和 loss 都是由 placeholder 定义的运算，所以这里要用 feed 传入参数
         sess.run(train_op, feed_dict={xs: x_data, ys: y_data})
         if i % 50 == 0:
