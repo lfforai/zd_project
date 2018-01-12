@@ -3,28 +3,28 @@ import re
 import numpy as np
 
 #
-# s="济南生产运营中心庄子_风机10_变桨1故障字2"
-# seg_list = jieba.cut(s, cut_all=True)
-# print("Full Mode: " + "/ ".join(seg_list))  # 全模式
-#
-# seg_list = jieba.cut(s, cut_all=False)
-# print("Default Mode: " + "/ ".join(seg_list))  # 精确模式
-#
-# seg_list = jieba.cut(s)  # 默认是精确模式
-# print(", ".join(seg_list))
-#
-# seg_list = jieba.cut_for_search(s)  # 搜索引擎模式
-# print(", ".join(seg_list))
+s="济南生产运营中心庄子_风机10_变桨1故障字2"
+seg_list = jieba.cut(s, cut_all=True)
+print("Full Mode: " + "/ ".join(seg_list))  # 全模式
+
+seg_list = jieba.cut(s, cut_all=False)
+print("Default Mode: " + "/ ".join(seg_list))  # 精确模式
+
+seg_list = jieba.cut(s)  # 默认是精确模式
+print(", ".join(seg_list))
+
+seg_list = jieba.cut_for_search(s)  # 搜索引擎模式
+print(", ".join(seg_list))
 #
 
 import csv
-device_code=['GU','GS','GT','GA','GW','HJ','GL','GR','FJ']
+device_code=['GU','GS','GT','GA','GW','HJ','GL','GR','FJ']#9
 d_l=device_code.__len__()
 
 state_code=['CD','PW','PR','PP','PJ','JR','CN','CU','PF','PV'\
             ,'PA','UR','TM','MS','SS','BF','MA','ST','TS','SA','AD'\
             ,'CA','CT','CP','XD','EF','RR','WP','YD','TP','TR'\
-            ,'AN','EN','RA','EX','ZT','ZJ','VA','ZK','ZD','YC','BS','BJ']
+            ,'AN','EN','RA','EX','ZT','ZJ','VA','ZK','ZD','YC','BS','BJ']#43
 s_l=state_code.__len__()
 
 for i in range(s_l-d_l):
@@ -90,7 +90,7 @@ def text2jieba(temp):
     return cc
 
 #line="济南生产运营中心庄子_风机10_11#DP故障信息(luoe)[ddd]"
-def read2words(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/PointData_201801051031.csv'):
+def read2words(filename='/media/root/d97c01a3-a661-4ef0-bcf2-45228d6277912/PointData_201801051031.csv'):
     print("开始建立word词库！")
     bid_info = csv.DictReader(open(filename,'r'))
     dict_data = []
@@ -174,7 +174,7 @@ def onehot2mark(result_mark=device_code,device_code=device_code,state_code=state
     return str(result[0]+"_"+result[1])
 
 #提取模型的x和y
-def text2x_y(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/PointData_201801051031.csv',std_one_hot=[]):
+def text2x_y(filename='/media/root/d97c01a3-a661-4ef0-bcf2-45228d6277912/PointData_201801051031.csv',std_one_hot=[]):
     print("开始生成样本x_vs_y!")
     bid_info = csv.DictReader(open(filename,'r'))
     dict_data = []
@@ -184,7 +184,7 @@ def text2x_y(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/Poin
         else:
             dict_data.append(lines)
     row_num = len(dict_data)
-    row_num=100
+
     # print('this is all the data---' + str(dict))
     result=[]
     #循环读取每一行
@@ -193,19 +193,19 @@ def text2x_y(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/Poin
     total_space={"_":0}
     while(i < row_num):
         if not str(dict_data[i]["name"]).__eq__(""):
-            #print(str(dict_data[i]["z"]),str(dict_data[i]["name"]))
+            print(str(dict_data[i]["z"]),str(dict_data[i]["name"]))
             x,y=text2onehot(str(dict_data[i]["z"]),str(dict_data[i]["name"]),std_one_hot)
             result.append([x,y])
-            # print(x,y)
-            # print("----------------------------------------------------")
+            print(x,y)
+            print("----------------------------------------------------")
             j=j+1
         i += 1
     print("结束生成样本x_vs_y!")
     return result
 
 #创建词库
-std_one_hot=read2words(filename='/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/PointData_201801051031.csv')
-
+std_one_hot=read2words(filename='/media/root/d97c01a3-a661-4ef0-bcf2-45228d6277912/PointData_201801051031.csv')
+print(std_one_hot)
 # x,y=text2onehot("红星二场一期光伏日发电量"," G_XJTX_HM_01P_001GL_PJ001",std_one_hot)
 # z=onehot2mark(result_mark=y)
 # print(x)
@@ -225,114 +225,131 @@ x_len=list(result[0][0]).__len__()
 print("x_len:=",x_len)
 y_len=list(result[0][1]).__len__()
 print("y_len:=",y_len)
-batchSize=10
-print("aaaaa")
+batchSize=10000
 
 img=tf.convert_to_tensor(np.array([e[0] for e in result]),dtype=tf.float32)
-# with tf.Session() as ses:
-#     print(img.get_shape())
-#     print(ses.run(img))
-# ses.close()
 label=tf.convert_to_tensor(np.array([e[1] for e in result]),dtype=tf.float32)
-# with tf.Session() as ses:
-#     print(label.get_shape())
-#     print(ses.run(label))
-# ses.close()
 
-#从python的np.array中获获取分批生成
-def batch_input(img,label, batchSize):
-    min_after_dequeue = 1000
-    capacity = min_after_dequeue+3*batchSize
-    print(capacity)
-    # 预取图像和label并随机打乱，组成batch，此时tensor rank发生了变化，多了一个batch大小的维度
-    exampleBatch,labelBatch = tf.train.shuffle_batch([img, label],batch_size=batchSize, capacity=capacity,
-                                                     min_after_dequeue=min_after_dequeue)
-    print(capacity)
-    return exampleBatch,labelBatch
+dataset_img = tf.data.Dataset.from_tensor_slices(img)
+dataset_label = tf.data.Dataset.from_tensor_slices(label)
+dataset = tf.data.Dataset.zip((dataset_img,dataset_label))
+
+dataset = dataset.shuffle(buffer_size=200000)
+dataset = dataset.batch(400)
+dataset = dataset.repeat(100)
+iterator = dataset.make_one_shot_iterator()
+
+# with tf.Session() as sess:
+#     # sess.run(iterator.initializer)
+#     for i in range(100):
+#         x,y=sess.run(iterator.get_next())
+#         print(x)
+#         print("－－－－－－－－－－－－－－－",i)
+# exit()
 
 # define placeholder for inputs to network
 xs = tf.placeholder(tf.float32, [None, x_len])
 ys = tf.placeholder(tf.float32, [None, y_len])
 
 with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
-    w1=tf.get_variable("w1", [20, 300])
-    b1=tf.get_variable("b1", [300])
-    w2=tf.get_variable("w2", [300, 150])
-    b2=tf.get_variable("b2", [150])
-    w3=tf.get_variable("w3", [150, 86])
-    b3=tf.get_variable("b3", [86])
+    # w1=tf.get_variable("w1", [20, 300])
+    # b1=tf.get_variable("b1", [300])
+    # w2=tf.get_variable("w2", [300, 150])
+    # b2=tf.get_variable("b2", [150])
+    # w3=tf.get_variable("w3", [150, 86])
+    # b3=tf.get_variable("b3", [86])
 
     #全链接神经网，l1=input×300+300, l2=300*150+150,l3=150*75+75
-    def mlp(X,Y,n_maxouts=5):
+    def mlp(X,Y,n_maxouts=3):
         # construct learnable parameters within local scope
-        w1=tf.get_variable("w1", [X.get_shape()[1], 300], initializer=tf.random_normal_initializer())
-        b1=tf.get_variable("b1", [300], initializer=tf.constant_initializer(0.0))
-        w2=tf.get_variable("w2", [300, 150], initializer=tf.random_normal_initializer())
-        b2=tf.get_variable("b2", [150], initializer=tf.constant_initializer(0.0))
-        w3=tf.get_variable("w3", [150, Y.get_shape()[1]], initializer=tf.random_normal_initializer())
-        b3=tf.get_variable("b3", [Y.get_shape()[1]], initializer=tf.constant_initializer(0.0))
-        #w4=tf.get_variable("w3", [75,output_dim], initializer=tf.random_normal_initializer())
-        #b4=tf.get_variable("b3", [output_dim], initializer=tf.constant_initializer(0.0))
+      with tf.device('/gpu:0'):
+        w1=tf.get_variable("w1", [X.get_shape()[1], 500], initializer=tf.random_normal_initializer())
+        b1=tf.get_variable("b1", [500], initializer=tf.constant_initializer(0.5))
+        w2=tf.get_variable("w2", [500, 250], initializer=tf.random_normal_initializer())
+        b2=tf.get_variable("b2", [250], initializer=tf.constant_initializer(0.5))
+        w3=tf.get_variable("w3", [250,150], initializer=tf.random_normal_initializer())
+        b3=tf.get_variable("b3", [150], initializer=tf.constant_initializer(0.5))
+        w4=tf.get_variable("w4", [150,Y.get_shape()[1]], initializer=tf.random_normal_initializer())
+        b4=tf.get_variable("b4", [Y.get_shape()[1]], initializer=tf.constant_initializer(0.0))
         # nn operators
-        fc1=tf.nn.relu(tf.matmul(input,w1)+b1)
+        fc1=tf.nn.relu(tf.matmul(X,w1)+b1)
         # fc1= tf.nn.dropout(fc1, keep_prob=0.5)
         fc2=tf.nn.relu(tf.matmul(fc1,w2)+b2)
         # fc2= tf.nn.dropout(fc2, keep_prob=0.5)
         fc3=tf.nn.relu(tf.matmul(fc2,w3)+b3)
-        # mo_list=[]
-        # if n_maxouts>0 :
-        #     w = tf.get_variable('mo_w_0', [75,output_dim],initializer=tf.random_normal_initializer())
-        #     b = tf.get_variable('mo_b_0', [output_dim],initializer=tf.constant_initializer(0.0))
-        #     fc4 = tf.matmul(fc3, w) + b
-        #     mo_list.append(w)
-        #     mo_list.append(b)
-        #     for i in range(n_maxouts):
-        #         if i>0:
-        #             w = tf.get_variable('mo_w_%d' % i, [75,output_dim],initializer=tf.random_normal_initializer())
-        #             b = tf.get_variable('mo_b_%d' % i, [output_dim],initializer=tf.constant_initializer(0.0))
-        #             mo_list.append(w)
-        #             mo_list.append(b)
-        #             fc4=tf.stack([fc4,tf.matmul(fc3, w) + b],axis=-1)
-        #             fc4 = tf.reduce_max(fc4,axis=-1)
-        # else:
-        #     fc4=tf.matmul(fc3,w4)+b4
-        return fc3, [w1,b1,w2,b2,w3,b3]
-    print("-------------------------3")
-    output,var_vlaue=mlp(xs,ys)
-    print("-------------------------2")
+        mo_list=[]
+        if n_maxouts>0 :
+            w = tf.get_variable('mo_w_0', [150,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
+            b = tf.get_variable('mo_b_0', [Y.get_shape()[1]],initializer=tf.constant_initializer(0.0))
+            fc4 = tf.matmul(fc3, w) + b
+            mo_list.append(w)
+            mo_list.append(b)
+            for i in range(n_maxouts):
+                if i>0:
+                    w = tf.get_variable('mo_w_%d' % i, [150,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
+                    b = tf.get_variable('mo_b_%d' % i, [Y.get_shape()[1]],initializer=tf.constant_initializer(0.0))
+                    mo_list.append(w)
+                    mo_list.append(b)
+                    fc4=tf.stack([fc4,tf.matmul(fc3, w) + b],axis=-1)
+                    fc4 = tf.reduce_max(fc4,axis=-1)
+        else:
+            fc4=tf.matmul(fc3,w4)+b4
+        return fc4
+
+    output=mlp(xs,ys)
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=ys))
-    print("-------------------------4")
+
     #计算预测数据与实际数据的差异,进行精度检测
     predict = tf.reshape(output, [-1, 2, d_l])
     max_idx_p = tf.argmax(predict, 2)
     max_idx_l = tf.argmax(tf.reshape(ys, [-1, 2, d_l]), 2)
     correct_pred = tf.equal(max_idx_p, max_idx_l)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    print("------------------------1-")
 
-# train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+    # train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
     train_op = tf.train.AdagradOptimizer(0.01).minimize(loss)
 
-# important step 对所有变量进行初始化
-init = tf.initialize_all_variables()
-saver = tf.train.Saver()
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
+    # important step 对所有变量进行初始化
+    init = tf.global_variables_initializer()
+    saver = tf.train.Saver()
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
 
-with tf.Session(config=config) as sess:
-    sess.run(init)
-    # 迭代 1000 次学习，sess.run optimizer
-    for step in range(2000):
-        print("-------------------------")
-        x_data,y_data=batch_input(img,label,batchSize)
-        print(sess.run(x_data))
-        print(sess.run(y_data))
-
-        # training train_step 和 loss 都是由 placeholder 定义的运算，所以这里要用 feed 传入参数
-        sess.run(train_op, feed_dict={xs: x_data, ys: y_data})
-        if i % 50 == 0:
-            saver.save(sess, "tmp_NLP.model", global_step=step)
-            # to see the step improvement
-            print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data}))
-sess.close()
+    # with tf.train.MonitoredTrainingSession(
+    #         # hooks=[tf.train.StopAtStepHook(last_step=2000),
+    #         #        tf.train.NanTensorHook(loss)],
+    #         config=config
+    #    ) as sess:
+    #      sess.run(init)
+    #      step=0
+    #      while not sess.should_stop():
+    #              sess.run(loss)
+    #              if step % 50 == 0:
+    #                  # saver.save(sess, "tmp_NLP.model", global_step=step)
+    #                  # to see the step improvement
+    #                  # print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data}))
+    #                  print(step,sess.run(accuracy))
+    #              step=step+1
+    with tf.device('/gpu:0'):
+        with tf.Session(config=config) as sess:
+            sess.run(init)
+            #sess.run(iterator.initializer)
+            # 迭代 1000 次学习，sess.run optimizer
+            for step in range(50000):
+                x_data, y_data = sess.run(iterator.get_next())
+                #sess.run(iterator.initializer)
+                # training train_step 和 loss 都是由 placeholder 定义的运算，所以这里要用 feed 传入参数
+                try:
+                    #sess.run(loss)
+                    sess.run(train_op, feed_dict={xs: x_data, ys: y_data})
+                    if step % 50 == 0:
+                        # saver.save(sess, "tmp_NLP.model", global_step=step)
+                        # to see the step improvement
+                        print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data}))
+                        # print(sess.run(loss, feed_dict={xs: x_data, ys: y_data}))
+                        # print(step,sess.run(accuracy))
+                except tf.errors.OutOfRangeError:
+                    print("chu")
+                    break
+        sess.close()
 
