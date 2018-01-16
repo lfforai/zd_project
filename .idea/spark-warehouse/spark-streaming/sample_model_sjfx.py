@@ -251,7 +251,6 @@ def sample_from_hdfs(sc,hdfs_path=["/zd_data11.14/PJ/","/zd_data11.14/PW/","/zd_
       return  group_name_total_list,group_name_cz_list
        #group_name_total_list:['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
        #group_name_cz_list: ['G_LYXGF', 'W', 'G_LYXGF_1_115NW001.1.txt|G_LYXGF_1_115NW002.1.txt|G_LYXGF_1_116NW001.1.txt|G_LYXGF_1_116NW002.1.txt|G_LYXGF_1_117NW001.1.txt|G_LYXGF_1_117NW002.1.txt']
-RDD=sc.textFile()
 
 #厂站-QSW
 def sample_file_to_rdd(sc,filedir="/zd_data11.14/",filelist=[],work_num=4,fractions=0.50,max_sample_length=10000,hdfs_addr="hdfs://sjfx1:9000"):

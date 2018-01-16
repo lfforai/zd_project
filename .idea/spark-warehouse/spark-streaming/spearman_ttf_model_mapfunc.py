@@ -386,7 +386,7 @@ def map_func(args, ctx):
                                     print("a的均值：========",avg_jf)
                                     av_jf=np.average(np.array(avg_jf))#均值
                                     ad_jf=np.std(np.array(avg_jf))#标准差
-                                    if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
+                                    if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                     #4分之3以上怀疑为异常点
@@ -450,7 +450,7 @@ def map_func(args, ctx):
                                            print("a的均值：========",avg_jf)
                                            av_jf=np.average(np.array(avg_jf))#均值
                                            ad_jf=np.std(np.array(avg_jf))#标准差
-                                           if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
+                                           if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                                results.append(batch_ys[i][0])
                                                print("成功放入！------------",batch_ys[i][0])
                                                #4分之3以上怀疑为异常点
@@ -471,12 +471,12 @@ def map_func(args, ctx):
 
                                    continue_N=0
                                    #相关系数检查结果不用重复判断直接判错
-                                   if  sum(mark_list)>=list_length_first-1 and max(info_N[i])<0.30 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
+                                   if  sum(mark_list)>=list_length_first-1 and max(info_N[i])<0.50 and abs(np.average(batch_ys[i][1]))>0.05:#如果当前源点和其他源点的相关系数排位在倒数二位以内的占比低于占到了全部点的
                                        results.append(batch_ys[i][0])
                                        print("成功放入！------------",batch_ys[i][0])
                                        continue_N=1
 
-                                   if  continue_N==0 and batch_max_out[i]>avg_var_max+2.0*ad_var_max or batch_max_out[i]<avg_var_max-2.0*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                   if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
                                        #进行积分重合度测试判断是否最后放入到异常数据
                                        print("放入检查！------------",batch_ys[i][0])
                                        #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
@@ -514,7 +514,7 @@ def map_func(args, ctx):
                                        print("a的均值：========",avg_jf)
                                        av_jf=np.average(np.array(avg_jf))#均值
                                        ad_jf=np.std(np.array(avg_jf))#标准差
-                                       if avg_jf[i]>av_jf+2.0*ad_jf or avg_jf[i]<av_jf-2.0*ad_jf:
+                                       if avg_jf[i]>av_jf+1.8*ad_jf or avg_jf[i]<av_jf-1.8*ad_jf:
                                            results.append(batch_ys[i][0])
                                            print("成功放入！------------",batch_ys[i][0])
                                            #4分之3以上怀疑为异常点
