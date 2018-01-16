@@ -96,7 +96,7 @@ def text2jieba(temp):
 # print("luofeng",text2jieba(s))
 # exit()
 #text分解到one_hot向量,len返回的固定向量长度,10
-def text2onehot(text,marking,std_one_hot=[],device_code=device_code,state_code=state_code,len=8):
+def text2onehot(text,marking,std_one_hot=[],device_code=device_code,state_code=state_code,len=10):
     global is_digt
     device_code_len=d_l
     state_code_len=s_l
@@ -133,6 +133,33 @@ def text2onehot(text,marking,std_one_hot=[],device_code=device_code,state_code=s
     else:
        return ['bad','bad']
 
+#把字符串输入，转化为[0,0,0,1,0]的onehot
+def text2onehot_2(text,marking,std_one_hot=[],device_code=device_code,state_code=state_code,std_one_hot_len=1849):
+    global is_digt
+    device_code_len=d_l
+    state_code_len=s_l
+    result_mark=list(np.zeros(device_code_len+state_code_len))
+    text_list=list(text2jieba(text))#分解为
+    # 景峡一期每日发电量 := G_XJJX_HM_01W_001GL_PJ001
+    # ['景峡', '一期', '每日', '发电量']
+    result=[0]*std_one_hot_len #初始化·["_","_","_"]
+    index_H=int(list(std_one_hot).index("_"))
+
+    for e in text_list:
+        if std_one_hot.__contains__(e):
+            index_N=int(list(std_one_hot).index(e))
+            result[index_N]=1
+        else:
+            result[index_H]=0
+
+    marking_list=str(marking).replace(" ","")[-8:-3].split("_")
+    if device_code.__contains__(str(marking_list[0])) and state_code.__contains__(str(marking_list[1])) :
+        result_mark[device_code.index(str(marking_list[0]))]=1
+        result_mark[state_code.index(str(marking_list[1]))+device_code_len]=1
+        return [result,result_mark]#one_hot向量和所属标记
+    else:
+        return ['bad','bad']
+
 #line="济南生产运营中心庄子_风机10_11#DP故障信息(luoe)[ddd]"
 def read2words(filename='/PointData_201801051031.csv'):
     print("开始建立word词库！")
@@ -168,7 +195,7 @@ def read2words(filename='/PointData_201801051031.csv'):
     total_space["_"]=1
     b=zip(total_space.keys(),total_space.values())   #拉成Tuple对组成的List
     total_space=list(sorted(b, key=lambda item:item[1]))
-    total_space=dict(filter(lambda x: True if int(x[1])>0 else False,total_space))
+    total_space=dict(filter(lambda x: True if int(x[1])>10 else False,total_space))
     std_one_hot=total_space.keys()#标准化词汇表
     # print(std_one_hot)
     print("word词库已经建立完成")
@@ -193,6 +220,7 @@ def onehot2mark(result_mark=device_code,device_code=device_code,state_code=state
 #提取模型的x和y
 def text2x_y(filename='/PointData_201801051031.csv',std_one_hot=[]):
     print("开始生成样本x_vs_y!")
+    std_one_hot_len=list(std_one_hot).__len__()
     bid_info = csv.DictReader(open(filename,'r'))
     dict_data = []
     for lines in bid_info:
@@ -210,7 +238,7 @@ def text2x_y(filename='/PointData_201801051031.csv',std_one_hot=[]):
     while(i < row_num):
         if not str(dict_data[i]["name"]).__eq__(""):
             #print(str(dict_data[i]["z"]),str(dict_data[i]["name"]))
-            x,y=text2onehot(str(dict_data[i]["z"]),str(dict_data[i]["name"]),std_one_hot)
+            x,y=text2onehot(str(dict_data[i]["z"]),str(dict_data[i]["name"]),std_one_hot,len=std_one_hot_len)
             result.append([x,y])
             #print(x,y)
             #print("----------------------------------------------------")
@@ -219,10 +247,46 @@ def text2x_y(filename='/PointData_201801051031.csv',std_one_hot=[]):
     print("结束生成样本x_vs_y!")
     return result
 
+#提取模型的x和y
+def text2x_y_2(filename='/PointData_201801051031.csv',std_one_hot=[]):
+    print("开始生成样本x_vs_y!")
+    std_one_hot_len=list(std_one_hot).__len__()
+    bid_info = csv.DictReader(open(filename,'r'))
+    dict_data = []
+    for lines in bid_info:
+        if bid_info.line_num == 1:
+            continue
+        else:
+            dict_data.append(lines)
+    row_num = len(dict_data)
+    # row_num=1000
+    # print('this is all the data---' + str(dict))
+    result=[]
+    #循环读取每一行
+    i = 0
+    j = 0
+    total_space={"_":0}
+    while(i < row_num):
+        if not str(dict_data[i]["name"]).__eq__(""):
+            #print(str(dict_data[i]["z"]),str(dict_data[i]["name"]))
+            x,y=text2onehot_2(str(dict_data[i]["z"]),str(dict_data[i]["name"]),std_one_hot,std_one_hot_len=std_one_hot_len)
+            result.append([x,y])
+            #print(list(x).__len__())
+            #print("@@@@@@")
+            #print(list(y).__len__())
+            #print("----------------------------------------------------")
+            j=j+1
+        i += 1
+    print("结束生成样本x_vs_y!")
+    return result
+
 #创建词库
 std_one_hot=read2words(filename='/PointData_201801051031.csv')
-# print(std_one_hot)
-print(std_one_hot.__len__)
+std_one_hot=std_one_hot[-1764:-1]
+std_one_hot.append('_')
+std_one_hot_len=std_one_hot.__len__()
+power_std_one_hot_len=np.power(std_one_hot_len,0.5)
+print(power_std_one_hot_len)
 # print(text2jieba(s))
 # a=text2onehot(s,"G_DBTS_SY_01W_022FJ_CN004",std_one_hot=std_one_hot)
 # print(a)
@@ -241,7 +305,7 @@ print(std_one_hot.__len__)
 # print(z)
 #一、开始执行
 #（1）创建样本储存为onehot-mark的格式
-result=text2x_y(std_one_hot=std_one_hot)
+result=text2x_y_2(std_one_hot=std_one_hot)
 result=list(filter(lambda x:True if not str(x[0]).__eq__("bad") else False,result))
 # print(result)
 
@@ -262,9 +326,9 @@ dataset_img = tf.contrib.data.Dataset.from_tensor_slices(img)
 dataset_label = tf.contrib.data.Dataset.from_tensor_slices(label)
 dataset = tf.contrib.data.Dataset.zip((dataset_img,dataset_label))
 
-dataset = dataset.shuffle(buffer_size=10000)
-dataset = dataset.batch(100)
-dataset = dataset.repeat(5)
+dataset = dataset.shuffle(buffer_size=100000)
+dataset = dataset.batch(200)
+dataset = dataset.repeat(20)
 iterator = dataset.make_initializable_iterator()
 
 # with tf.Session() as sess:
@@ -278,6 +342,8 @@ iterator = dataset.make_initializable_iterator()
 # define placeholder for inputs to network
 xs = tf.placeholder(tf.float32, [None, x_len])
 ys = tf.placeholder(tf.float32, [None, y_len])
+# 为了防止过拟合，在输出层之前加Dropout层
+keep_prob = tf.placeholder(tf.float32)
 
 with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
     # w1=tf.get_variable("w1", [20, 300])
@@ -286,6 +352,73 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
     # b2=tf.get_variable("b2", [150])
     # w3=tf.get_variable("w3", [150, 86])
     # b3=tf.get_variable("b3", [86])
+
+    #卷积神经网
+    def mlp_cnn(X,keep_prob,n_maxouts=3):
+      with tf.device('/gpu:1'):
+        #########卷积网络会有很多的权重和偏置需要创建，先定义好初始化函数以便复用########
+        # 给权重制造一些随机噪声打破完全对称（比如截断的正态分布噪声，标准差设为0.1）
+        def weight_variable(shape):
+            initial = tf.truncated_normal(shape, stddev=0.1)
+            return tf.Variable(initial)
+        # 因为我们要使用ReLU，也给偏置增加一些小的正值（0.1）用来避免死亡节点（dead neurons）
+        def bias_variable(shape):
+            initial = tf.constant(0.1, shape=shape)
+            return tf.Variable(initial)
+
+        ########卷积层、池化层接下来重复使用的，分别定义创建函数########
+        # tf.nn.conv2d是TensorFlow中的2维卷积函数
+        def conv2d(x, W):
+            return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+        # 使用2*2的最大池化
+        def max_pool_2x2(x):
+            return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+
+        # 使用3*3的最大池化
+        def max_pool_3x3(x):
+            return tf.nn.max_pool(x, ksize=[1, 3, 3, 1],strides=[1, 3, 3, 1], padding='SAME')
+            ########正式设计卷积神经网络之前先定义placeholder########
+
+        # x是特征，y_是真实label。将图片数据从1D转为2D。使用tensor的变形函数tf.reshape
+        # x = tf.placeholder(tf.float32, shape=[None,X.get_shape()[1]])
+        #y = tf.placeholder(tf.float32, shape=[None,Y.get_shape()[1]])
+        x_image = tf.reshape(X,[-1,int(power_std_one_hot_len),int(power_std_one_hot_len),1])
+
+        ########设计卷积神经网络########
+        # 第一层卷积
+        # 卷积核尺寸为5*5,1个颜色通道，32个不同的卷积核
+        W_conv1 = weight_variable([5, 5, 1, 32])
+        # 用conv2d函数进行卷积操作，加上偏置
+        b_conv1 = bias_variable([32])
+        # 把x_image和权值向量进行卷积，加上偏置项，然后应用ReLU激活函数，
+        h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+        # 对卷积的输出结果进行池化操作
+        h_pool1 = max_pool_2x2(h_conv1)
+        #print("h_pool1.get_shape()",h_pool1.get_shape())
+
+        # 第二层卷积（和第一层大致相同，卷积核为64，这一层卷积会提取64种特征）
+        W_conv2 = weight_variable([5, 5, 32, 64])
+        b_conv2 = bias_variable([64])
+        h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+        h_pool2 = max_pool_3x3(h_conv2)
+        # print("h_pool2.get_shape()",h_pool2.get_shape())
+        # exit()
+
+        # 全连接层。隐含节点数1024。使用ReLU激活函数
+        W_fc1 = weight_variable([7*7*64, 1024])
+        b_fc1 = bias_variable([1024])
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+        h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+        # 为了防止过拟合，在输出层之前加Dropout层
+        # keep_prob = tf.placeholder(tf.float32)
+        # h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+        # 输出层。添加一个softmax层，就像softmax regression一样。得到概率输出。
+        W_fc2 = weight_variable([1024, y_len])
+        b_fc2 = bias_variable([y_len])
+        fc4=tf.matmul(h_fc1, W_fc2) + b_fc2
+        return fc4
+
 
     #全链接神经网，l1=input×300+300, l2=300*150+150,l3=150*75+75
     def mlp(X,Y,n_maxouts=3):
@@ -324,7 +457,7 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
             fc4=tf.matmul(fc3,w4)+b4
         return fc4
 
-    output=mlp(xs,ys)
+    output=mlp_cnn(xs,keep_prob)
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=ys))
 
     #计算预测数据与实际数据的差异,进行精度检测
@@ -357,7 +490,7 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
     #                  # print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data}))
     #                  print(step,sess.run(accuracy))
     #              step=step+1
-    with tf.device('/gpu:0'):
+    with tf.device('/gpu:1'):
         with tf.Session(config=config) as sess:
             sess.run(iterator.initializer)
             for step in range(100000):
@@ -370,11 +503,11 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
                 # training train_step 和 loss 都是由 placeholder 定义的运算，所以这里要用 feed 传入参数
                 try:
                     #sess.run(loss)
-                    sess.run(train_op, feed_dict={xs: x_data, ys: y_data})
+                    sess.run(train_op, feed_dict={xs: x_data, ys: y_data,keep_prob:0.5})
                     if step % 100 == 0:
-                        # saver.save(sess, "tmp_NLP.model", global_step=step)
+                        saver.save(sess, "/temp/tmp_NLP.model", global_step=step)
                         # to see the step improvement
-                        print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data}))
+                        print(sess.run(accuracy, feed_dict={xs: x_data, ys: y_data,keep_prob:0.5}))
                         # print(sess.run(loss, feed_dict={xs: x_data, ys: y_data}))
                         # print(step,sess.run(accuracy))
                 except tf.errors.OutOfRangeError:

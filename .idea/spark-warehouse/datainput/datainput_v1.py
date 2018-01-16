@@ -120,20 +120,20 @@ hdfs_dir="/zd_data11.14/FQ/"
 file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
-local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/沈阳_t_not/"
+local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/太原/"
 
 hdfs_dir1="/zd_data11.14/"
 
 ################################执行命令###############################
 #删除文件
-if False:
+if True:
    delete_hdfs(hdfs_path=deletefilename,addrs="sjfx1",port="50070")
 
 if False:
 #单个本地文件上传
    local_to_hdfs(hdfs_path=hdfs_dir,addrs="sjfx1",port="50070",local_filename=local_dir+local_to_hdfs_filename,file_hdfsname=file_hdfsname)
 
-if True:
+if False:
 #整个本地文件上传
    local_dir_to_hdfs(hdfs_path=hdfs_dir1,addrs="sjfx1",port="50070",local_filedir=local_dir1)
 
