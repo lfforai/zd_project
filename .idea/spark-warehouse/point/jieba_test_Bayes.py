@@ -204,7 +204,7 @@ def read2words(filename='/PointData_201801051031.csv'):
         state_pro[d_n]=float(state_pro[d_n])/sum_temp
     return device_code_space,state_code_space,device_pro,state_pro
 
-def forecast_Bayes(filename='/PointData_201801051031.csv'):
+def forecast_Bayes(filename,device_code_space,state_code_space,device_pro,state_pro):
     print("开始进行贝叶斯分类！")
     bid_info = csv.DictReader(open(filename,'r'))
     dict_data = []
@@ -215,18 +215,88 @@ def forecast_Bayes(filename='/PointData_201801051031.csv'):
             dict_data.append(lines)
     row_num = len(dict_data)
 
+    correct_device_num=0
+    correct_state_num=0
+
+    #贝叶斯概率计算 P（S1|A1,A2）=P（A1|s1）×p（A2|s1）×p（s1）/（sum（P（A1|sn）×p（A2|sn）×p（sn）））
+    def Bayes(list_jieba,device_code_space=device_code_space,state_code_space=state_code_space
+              ,device_pro=device_pro,state_pro=state_pro):
+
+        #计算出的所有概率的结果
+        list_pro_rezult_device=[]
+        list_pro_rezult_state=[]
+
+        #计算devcie的结果
+        #1\计算sum（P（A1|sn）×p（A2|sn）×p（sn））,假设A1..An相互独立
+        sum_device=[]
+        for e in device_code_space:
+            temp_sum_mid=1
+            for e1 in list_jieba:
+                temp_sum_mid=temp_sum_mid*device_code_space[e][e1]
+            list_pro_rezult_device.append(temp_sum_mid*device_pro[e])
+
+        #1\计算概率
+        sum_temp=sum(list_pro_rezult_device)
+        list_pro_rezult_device=np.array(list_pro_rezult_device)/sum_temp
+
+        #计算state的结果
+        sum_device=[]
+        for e in state_code_space:
+            temp_sum_mid=1
+            for e1 in list_jieba:
+                temp_sum_mid=temp_sum_mid*state_code_space[e][e1]
+            list_pro_rezult_state.append(temp_sum_mid*state_pro[e])
+        #1\计算概率
+        sum_temp=sum(list_pro_rezult_state)
+        list_pro_rezult_state=np.array(list_pro_rezult_state)/sum_temp
+
+        #计算device中的最大概率
+        list_d=list(enumerate(list_pro_rezult_device))
+        value_max_index_d=0
+        value_max_d=0
+        for e in list_d:
+          if e[1]>value_max_d:
+             value_max_d=e[1]
+             value_max_index_d=e[0]
+          else:
+             pass
+        result_d=device_code[value_max_index_d]
+
+        #计算device中的最大概率F
+        list_s=list(enumerate(list_pro_rezult_state))
+        value_max_index_s=0
+        value_max_s=0
+        for e in list_s:
+            if e[1]>value_max_s:
+                value_max_s=e[1]
+                value_max_index_s=e[0]
+            else:
+                pass
+        result_s=state_code[value_max_index_s]
+
+        return result_d,result_s
+
     for i in range(row_num):
         if not str(dict_data[i]["name"]).__eq__(""):
             temp_x=text2jieba(str(dict_data[i]["z"]))
             #print(temp_x)
             temp_y=str(dict_data[i]["name"]).replace(" ","")[-8:-3].split("_")
+            temp_p_d,temp_p_s=Bayes(temp_x)
+            if str(temp_p_d).__eq__(temp_y[0]):
+               correct_device_num=correct_device_num+1
+            if str(temp_p_s).__eq__(temp_y[1]):
+               correct_state_num_num=correct_state_num+1
+    return  correct_device_num/row_num,correct_state_num_num/row_num
 
 # print(text2jieba("1#站用变]一次有功功率"))
 device_code_space,state_code_space,device_pro,state_pro=read2words()
-total_space=device_code_space["FJ"]
-b=zip(total_space.keys(),total_space.values())   #拉成Tuple对组成的List
-total_space=list(sorted(b, key=lambda item:item[1]))
+# total_space=device_code_space["FJ"]
+# b=zip(total_space.keys(),total_space.values())   #拉成Tuple对组成的List
+# total_space=list(sorted(b, key=lambda item:item[1]))
 #total_space=dict(filter(lambda x: True if int(x[1])>10 or int(x[1])==0 else False,total_space))
-print(total_space)
-print("---------")
-print(device_pro)
+# print(total_space)
+# print("---------")
+# print(device_pro)
+# print(state_pro)
+print(forecast_Bayes(filename='/PointData_201801051031.csv',device_code_space=device_code_space,state_code_space=state_code_space
+                     ,device_pro=device_pro,state_pro=state_pro))
