@@ -179,26 +179,25 @@ def read2words(filename='/PointData_201801051031.csv'):
     #将频率转化为概率
     for d_n,x_n in device_code_space.items():
         sum_temp=sum(list(dict(x_n).values()))
-        print(sum_temp)
+        #print(sum_temp)
         if sum_temp>0:
             for d,x in x_n.items():
                 device_code_space[d_n][d]=float(x)/sum_temp
-
     print("-----------------------")
     for d_n,x_n in state_code_space.items():
         sum_temp=sum(list(dict(x_n).values()))
-        print(sum_temp)
+        #print(sum_temp)
         if sum_temp>0:
             for d,x in x_n.items():
                 state_code_space[d_n][d]=float(x)/sum_temp
 
-    print(device_pro)
+    #print(device_pro)
     sum_temp=sum(list(dict(device_pro).values()))
-    print(sum_temp)
+    #print(sum_temp)
     for d_n in device_pro:
         device_pro[d_n]=float(device_pro[d_n])/sum_temp
 
-    print(state_pro)
+    #print(state_pro)
     sum_temp=sum(list(dict(state_pro).values()))
     for d_n in state_pro:
         state_pro[d_n]=float(state_pro[d_n])/sum_temp
@@ -232,7 +231,10 @@ def forecast_Bayes(filename,device_code_space,state_code_space,device_pro,state_
         for e in device_code_space:
             temp_sum_mid=1
             for e1 in list_jieba:
-                temp_sum_mid=temp_sum_mid*device_code_space[e][e1]
+                if device_code_space[e].get(e1)==None:
+                   temp_sum_mid=temp_sum_mid*0.00000001
+                else:
+                   temp_sum_mid=temp_sum_mid*device_code_space[e][e1]
             list_pro_rezult_device.append(temp_sum_mid*device_pro[e])
 
         #1\计算概率
@@ -244,7 +246,10 @@ def forecast_Bayes(filename,device_code_space,state_code_space,device_pro,state_
         for e in state_code_space:
             temp_sum_mid=1
             for e1 in list_jieba:
-                temp_sum_mid=temp_sum_mid*state_code_space[e][e1]
+                if state_code_space[e].get(e1)==None:
+                   temp_sum_mid=temp_sum_mid*0.00000001
+                else:
+                   temp_sum_mid=temp_sum_mid*state_code_space[e][e1]
             list_pro_rezult_state.append(temp_sum_mid*state_pro[e])
         #1\计算概率
         sum_temp=sum(list_pro_rezult_state)
@@ -273,23 +278,40 @@ def forecast_Bayes(filename,device_code_space,state_code_space,device_pro,state_
             else:
                 pass
         result_s=state_code[value_max_index_s]
-
         return result_d,result_s
-
+    j=0
     for i in range(row_num):
         if not str(dict_data[i]["name"]).__eq__(""):
             temp_x=text2jieba(str(dict_data[i]["z"]))
-            #print(temp_x)
             temp_y=str(dict_data[i]["name"]).replace(" ","")[-8:-3].split("_")
+            #print(temp_x)
             temp_p_d,temp_p_s=Bayes(temp_x)
             if str(temp_p_d).__eq__(temp_y[0]):
                correct_device_num=correct_device_num+1
+               # print("device right!")
+            else:
+               pass
+               # print("device 错误！")
+               # print("device:",temp_p_d)
+               # print("device:=",temp_x)
+               # print("device:=",temp_y[0])
+            #print("----------------------------------")
             if str(temp_p_s).__eq__(temp_y[1]):
-               correct_state_num_num=correct_state_num+1
-    return  correct_device_num/row_num,correct_state_num_num/row_num
+               correct_state_num=correct_state_num+1
+               #print("state right!")
+            else:
+               pass
+               # print("state 错误！")
+               # print("state:",temp_p_s)
+               # print("state:=",temp_x)
+               # print("state:=",temp_y[1])
+            j=j+1
+    return  correct_device_num/j,correct_state_num/j
 
 # print(text2jieba("1#站用变]一次有功功率"))
 device_code_space,state_code_space,device_pro,state_pro=read2words()
+# print(state_code_space["CT"])
+# exit()
 # total_space=device_code_space["FJ"]
 # b=zip(total_space.keys(),total_space.values())   #拉成Tuple对组成的List
 # total_space=list(sorted(b, key=lambda item:item[1]))
