@@ -263,8 +263,8 @@ dataset_label = tf.contrib.data.Dataset.from_tensor_slices(label)
 dataset = tf.contrib.data.Dataset.zip((dataset_img,dataset_label))
 
 dataset = dataset.shuffle(buffer_size=10000)
-dataset = dataset.batch(100)
-dataset = dataset.repeat(5)
+dataset = dataset.batch(200)
+dataset = dataset.repeat(50)
 iterator = dataset.make_initializable_iterator()
 
 # with tf.Session() as sess:
@@ -288,16 +288,16 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
     # b3=tf.get_variable("b3", [86])
 
     #全链接神经网，l1=input×300+300, l2=300*150+150,l3=150*75+75
-    def mlp(X,Y,n_maxouts=3):
+    def mlp(X,Y,n_maxouts=5):
         # construct learnable parameters within local scope
       with tf.device('/gpu:0'):
-        w1=tf.get_variable("w1", [X.get_shape()[1], 50], initializer=tf.random_normal_initializer())
-        b1=tf.get_variable("b1", [50], initializer=tf.constant_initializer(0.5))
-        w2=tf.get_variable("w2", [50, 30], initializer=tf.random_normal_initializer())
-        b2=tf.get_variable("b2", [30], initializer=tf.constant_initializer(0.5))
-        w3=tf.get_variable("w3", [30,25], initializer=tf.random_normal_initializer())
-        b3=tf.get_variable("b3", [25], initializer=tf.constant_initializer(0.5))
-        w4=tf.get_variable("w4", [25,Y.get_shape()[1]], initializer=tf.random_normal_initializer())
+        w1=tf.get_variable("w1", [X.get_shape()[1], 300], initializer=tf.random_normal_initializer())
+        b1=tf.get_variable("b1", [300], initializer=tf.constant_initializer(0.5))
+        w2=tf.get_variable("w2", [300, 200], initializer=tf.random_normal_initializer())
+        b2=tf.get_variable("b2", [200], initializer=tf.constant_initializer(0.5))
+        w3=tf.get_variable("w3", [200,100], initializer=tf.random_normal_initializer())
+        b3=tf.get_variable("b3", [100], initializer=tf.constant_initializer(0.5))
+        w4=tf.get_variable("w4", [100,Y.get_shape()[1]], initializer=tf.random_normal_initializer())
         b4=tf.get_variable("b4", [Y.get_shape()[1]], initializer=tf.constant_initializer(0.0))
         # nn operators
         fc1=tf.nn.relu(tf.matmul(X,w1)+b1)
@@ -307,14 +307,14 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
         fc3=tf.nn.relu(tf.matmul(fc2,w3)+b3)
         mo_list=[]
         if n_maxouts>0 :
-            w = tf.get_variable('mo_w_0', [25,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
+            w = tf.get_variable('mo_w_0', [100,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
             b = tf.get_variable('mo_b_0', [Y.get_shape()[1]],initializer=tf.constant_initializer(0.0))
             fc4 = tf.matmul(fc3, w) + b
             mo_list.append(w)
             mo_list.append(b)
             for i in range(n_maxouts):
                 if i>0:
-                    w = tf.get_variable('mo_w_%d' % i, [25,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
+                    w = tf.get_variable('mo_w_%d' % i, [100,Y.get_shape()[1]],initializer=tf.random_normal_initializer())
                     b = tf.get_variable('mo_b_%d' % i, [Y.get_shape()[1]],initializer=tf.constant_initializer(0.0))
                     mo_list.append(w)
                     mo_list.append(b)

@@ -105,7 +105,7 @@ def fuc(iterator):
         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
 
-cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/CU/"],addrs="sjfx1",port="50070", \
+cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
 # cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 # print(cz_FQW)
@@ -1087,7 +1087,7 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
     #.map(lambda x:str(x).split(",")). \
     # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/test_4.8.txt")
+rdd_AR.coalesce(10).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/呼.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

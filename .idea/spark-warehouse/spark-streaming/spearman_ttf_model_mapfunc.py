@@ -348,7 +348,7 @@ def map_func(args, ctx):
                                     print("成功放入！------------",batch_ys[i][0])
                                     continue_N=1
 
-                                if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                if  continue_N==0 and batch_max_out[i]>avg_var_max+2.0*ad_var_max or batch_max_out[i]<avg_var_max-2.0*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
                                 #进行积分重合度测试判断是否最后放入到异常数据
                                     print("放入检查！------------",batch_ys[i][0])
                                     #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
@@ -412,7 +412,7 @@ def map_func(args, ctx):
                                            print("成功放入！------------",batch_ys[i][0])
                                            continue_N=1
 
-                                       if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                       if  continue_N==0 and batch_max_out[i]>avg_var_max+2.0*ad_var_max or batch_max_out[i]<avg_var_max-2.0*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
                                            #进行积分重合度测试判断是否最后放入到异常数据
                                            print("放入检查！------------",batch_ys[i][0])
                                            #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点
@@ -476,7 +476,7 @@ def map_func(args, ctx):
                                        print("成功放入！------------",batch_ys[i][0])
                                        continue_N=1
 
-                                   if  continue_N==0 and batch_max_out[i]>avg_var_max+1.8*ad_var_max or batch_max_out[i]<avg_var_max-1.8*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
+                                   if  continue_N==0 and batch_max_out[i]>avg_var_max+2.0*ad_var_max or batch_max_out[i]<avg_var_max-2.0*ad_var_max and abs(np.average(batch_ys[i][1]))>0.05:
                                        #进行积分重合度测试判断是否最后放入到异常数据
                                        print("放入检查！------------",batch_ys[i][0])
                                        #a=(x'*y+y'*x)/y‘*y,如何a的值比较大认为存在是异常点

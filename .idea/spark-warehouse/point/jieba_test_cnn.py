@@ -148,9 +148,9 @@ def text2onehot_2(text,marking,std_one_hot=[],device_code=device_code,state_code
     for e in text_list:
         if std_one_hot.__contains__(e):
             index_N=int(list(std_one_hot).index(e))
-            result[index_N]=1
+            result[index_N]=index_N
         else:
-            result[index_H]=0
+            result[index_H]=index_H
 
     marking_list=str(marking).replace(" ","")[-8:-3].split("_")
     if device_code.__contains__(str(marking_list[0])) and state_code.__contains__(str(marking_list[1])) :
