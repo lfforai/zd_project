@@ -124,69 +124,75 @@ y= random.rand(10240, 10240)
 #     z= np.dot(x, y)
 # z.asnumpy()
 # print('time: {:.3f}.'.format(time.time()-st))
-a=[1,2,3,4]
-b=[1,2,3,4]
-print(np.dot(np.transpose(a),b))
-a=[[1,0,3,4],[2,3,4,5]]
-print(np.average([e for e in np.array(a)[:,2] if e>0]))
-exit()
+# a=[1,2,3,4]
+# b=[1,2,3,4]
+# print(np.dot(np.transpose(a),b))
+# a=[[1,0,3,4],[2,3,4,5]]
+# print(np.average([e for e in np.array(a)[:,2] if e>0]))
+# exit()
+#
+# def calcMean(x,y):
+#     sum_x = sum(x)
+#     sum_y = sum(y)
+#     n = len(x)
+#     x_mean = float(sum_x+0.0)/n
+#     y_mean = float(sum_y+0.0)/n
+#     return x_mean,y_mean
+#
+# def calcPearson(x,y):
+#     x_mean,y_mean = calcMean(x,y)   #计算x,y向量平均值
+#     n = len(x)
+#     sumTop = 0.0
+#     sumBottom = 0.0
+#     x_pow = 0.0
+#     y_pow = 0.0
+#     for i in range(n):
+#         sumTop += (x[i]-x_mean)*(y[i]-y_mean)
+#     for i in range(n):
+#         x_pow += np.power(x[i]-x_mean,2)
+#     for i in range(n):
+#         y_pow += np.power(y[i]-y_mean,2)
+#     sumBottom = np.sqrt(x_pow*y_pow)
+#     p = sumTop/sumBottom
+#     return p
+#
+#
+# import numpy as np
+# import matplotlib.pyplot as plt
+# x=np.linspace(0,2*np.pi,50)
+# wave=np.cos(x)
+# wave1=np.sin(x)
+# transformed=np.fft.fft(wave) #傅里叶变换
+# transformed1=np.fft.fft(wave1) #傅里叶变换
+# print(transformed)
+# print(transformed1)
+# plt.plot(transformed.real)
+# plt.plot(transformed1.real)
+# plt.show()
+# print(calcPearson(transformed.real,transformed1.real))
+# exit()
+#
+# def fft(xx,N):
+#     rex=np.zeros(N)
+#     imx=np.zeros(N)
+#     pi=3.1415926
+#
+#     for k in range(N):
+#         for  i in range(N):
+#             rex[k]=rex[k]+xx[i]*np.cos(2*pi*k*i/N)
+#             imx[k]=imx[k]+xx[i]*np.sin(2*pi*k*i/N)
+#     return rex,imx
+# a,b=fft(wave,wave.size)
+# print(a)
+# print(b)
+# w=list([1,3,23,23,2,5])
+# print(w.__len__())
+# print(w[0:int(w.__len__()/2)])
 
-def calcMean(x,y):
-    sum_x = sum(x)
-    sum_y = sum(y)
-    n = len(x)
-    x_mean = float(sum_x+0.0)/n
-    y_mean = float(sum_y+0.0)/n
-    return x_mean,y_mean
-
-def calcPearson(x,y):
-    x_mean,y_mean = calcMean(x,y)   #计算x,y向量平均值
-    n = len(x)
-    sumTop = 0.0
-    sumBottom = 0.0
-    x_pow = 0.0
-    y_pow = 0.0
-    for i in range(n):
-        sumTop += (x[i]-x_mean)*(y[i]-y_mean)
-    for i in range(n):
-        x_pow += np.power(x[i]-x_mean,2)
-    for i in range(n):
-        y_pow += np.power(y[i]-y_mean,2)
-    sumBottom = np.sqrt(x_pow*y_pow)
-    p = sumTop/sumBottom
-    return p
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-x=np.linspace(0,2*np.pi,50)
-wave=np.cos(x)
-wave1=np.sin(x)
-transformed=np.fft.fft(wave) #傅里叶变换
-transformed1=np.fft.fft(wave1) #傅里叶变换
-print(transformed)
-print(transformed1)
-plt.plot(transformed.real)
-plt.plot(transformed1.real)
-plt.show()
-print(calcPearson(transformed.real,transformed1.real))
-exit()
-
-def fft(xx,N):
-    rex=np.zeros(N)
-    imx=np.zeros(N)
-    pi=3.1415926
-
-    for k in range(N):
-        for  i in range(N):
-            rex[k]=rex[k]+xx[i]*np.cos(2*pi*k*i/N)
-            imx[k]=imx[k]+xx[i]*np.sin(2*pi*k*i/N)
-    return rex,imx
-a,b=fft(wave,wave.size)
-print(a)
-print(b)
-w=list([1,3,23,23,2,5])
-print(w.__len__())
-print(w[0:int(w.__len__()/2)])
-
+x=[1,2,3,4]
+len=x.__len__()
+#print(list(x.reverse()[0:len-1]).reverse())
+print(x[0:len-1])
+x.pop(0)
+print(x)
 

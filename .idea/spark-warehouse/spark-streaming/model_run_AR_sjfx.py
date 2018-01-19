@@ -67,7 +67,11 @@ if_AR_mode_inference=0
 if_efk_mode_train=0
 if_efk_mode_inference=0
 if_cluster_mode_inference=0
-if_spear_mode_inference=0
+if_spear_mode_inference=1
+
+#测试用参数
+#输出结果用的函数
+
 
 # print("1111111111111111111111111111111111")
 # exit()
@@ -105,7 +109,7 @@ def fuc(iterator):
         value_list.append([a[0:index4]+a[index5-1:len],a[index5+1:index5+3],a[index5+1:len],str(a),a[index4+1:index5]])
     return value_list
 
-cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
+cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/PJ/"],addrs="sjfx1",port="50070", \
 # cz_FQW=sample_model_sjfx.sample_from_hdfs_N(sc,hdfs_path=["/zd_data11.14/QT/"],addrs="sjfx1",port="50070", \
                             group_num=2,sample_rato_FQS=1,sample_rato_FQS_cz=1,func=fuc)
 # print(cz_FQW)
@@ -896,8 +900,16 @@ if if_spear_mode_inference==1:
                             start_point_spear=3000;
                             pitch_length_spear=15000;
                         else:
-                            start_point_spear=5000;
-                            pitch_length_spear=20000;
+                            if min(mark_list)>1500 and min(mark_list)<=3500:
+                                start_point_spear=5000;
+                                pitch_length_spear=25000;
+                            else:
+                                if min(mark_list)>3500 and min(mark_list)<=5000:
+                                    start_point_spear=8000;
+                                    pitch_length_spear=35000;
+                                else:
+                                    start_point_spear=12000;
+                                    pitch_length_spear=50000;
 
                     #ex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
                     ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
@@ -953,8 +965,16 @@ if if_spear_mode_inference==1:
                 start_point_spear=3000;
                 pitch_length_spear=15000;
             else:
-                start_point_spear=5000;
-                pitch_length_spear=20000;
+                if min(mark_list)>1500 and min(mark_list)<=3500:
+                    start_point_spear=5000;
+                    pitch_length_spear=25000;
+                else:
+                    if min(mark_list)>3500 and min(mark_list)<=5000:
+                        start_point_spear=8000;
+                        pitch_length_spear=35000;
+                    else:
+                        start_point_spear=11000;
+                        pitch_length_spear=50000;
         #ex=sex=sample_model_sjfx.cluster_file_to_rdd(sc,filelist=list_tmp,work_num=spark_work,fractions=0.50,max_sample_length=200,hdfs_addr="hdfs://sjfx1:9000/",pitch_length=200)
         ex=sample_model_sjfx.cluster_FFT_spearman_to_rdd2(sc,filedir="/zd_data11.14/",
                                                           filelist=list_tmp,work_num=spark_work,
@@ -1084,10 +1104,10 @@ sqlContext=sql_n.SQLContext(sparkContext=sc,sparkSession=spark)
 #     map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
 # rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/output_efk.txt")
 
-rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult/*").distinct()
+rdd_AR=sc.textFile("hdfs://sjfx1:9000/rezult_last/呼.txt").distinct()
     #.map(lambda x:str(x).split(",")). \
     # map(lambda x:[float(str(x[0]).replace("[","")),float(x[1]),float(x[2]),str(x[3]).replace("]","").replace("\"","").replace("\'",'')]).filter(lambda x:x[0]>2000 or x[0]<-2000)
-rdd_AR.coalesce(10).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/呼.txt")
+rdd_AR.coalesce(1).saveAsTextFile("hdfs://sjfx1:9000/rezult_last/呼1.txt")
 
 print("-----------------完成－－－－－－－－－－－－－－－－－－－－开始")
 import time

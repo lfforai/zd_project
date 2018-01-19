@@ -288,23 +288,23 @@ def forecast_Bayes(filename,device_code_space,state_code_space,device_pro,state_
             temp_p_d,temp_p_s=Bayes(temp_x)
             if str(temp_p_d).__eq__(temp_y[0]):
                correct_device_num=correct_device_num+1
-               # print("device right!")
+               print("device right!")
             else:
                pass
-               # print("device 错误！")
-               # print("device:",temp_p_d)
-               # print("device:=",temp_x)
-               # print("device:=",temp_y[0])
-            #print("----------------------------------")
+               print("device 错误！")
+               print("device:",temp_p_d)
+               print("device:=",temp_x)
+               print("device:=",temp_y[0])
+            print("----------------------------------")
             if str(temp_p_s).__eq__(temp_y[1]):
                correct_state_num=correct_state_num+1
-               #print("state right!")
+               print("state right!")
             else:
                pass
-               # print("state 错误！")
-               # print("state:",temp_p_s)
-               # print("state:=",temp_x)
-               # print("state:=",temp_y[1])
+               print("state 错误！")
+               print("state:",temp_p_s)
+               print("state:=",temp_x)
+               print("state:=",temp_y[1])
             j=j+1
     return  correct_device_num/j,correct_state_num/j
 

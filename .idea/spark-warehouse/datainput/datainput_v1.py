@@ -16,6 +16,12 @@ from pyspark.conf import SparkConf #conf
 
 from pyspark.sql.types import *
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-b", "--batch_size", help="number of records per batch", type=int, default=10000)
+parser.add_argument("-e", "--epochs", help="number of epochs", type=int, default=1)
+
+args = parser.parse_args()
+
 schema = StructType([
     StructField("id",  StringType(), True),
     StructField("value", FloatType(), True),
@@ -121,13 +127,13 @@ hdfs_dir="/zd_data11.14/FQ/"
 file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
-local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/太原/"
-# local_dir1="/lf/data/test_new2/"
+#local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/太原/"
+local_dir1="/lf/test_3/20180119152742scenario_t10g7b3/"
 hdfs_dir1="/zd_data11.14/"
 
 ################################执行命令###############################
 #删除文件
-if False:
+if True:
    delete_hdfs(hdfs_path=deletefilename,addrs="sjfx1",port="50070")
    delete_hdfs(hdfs_path=deletefilename1,addrs="sjfx1",port="50070")
 
