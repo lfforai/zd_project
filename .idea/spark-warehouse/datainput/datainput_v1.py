@@ -4,7 +4,7 @@ import argparse
 import os
 import numpy
 import sys
-import tensorflow as tf
+# import tensorflow as tf
 import threading
 import time
 from datetime import datetime
@@ -112,6 +112,8 @@ def delete_hdfs(hdfs_path="/zd_data11.14/",addrs="127.0.0.1",port="50070",recurs
 #文件或者目录删除
 deletefilename="/zd_data11.14"
 deletefilename1="/rezult"
+deletefilename2="/model"
+deletefilename3="/rezult_last"
     #"/rezult/AR['G_ZDBY', 'Q', 'G_ZDBY_1_117NQ001.D.txt|G_ZDBY_1_117NQ002.D.txt|G_ZDBY_1_118NQ001.D.txt|G_ZDBY_1_118NQ002.D.txt|G_ZDBY_2_235NQ001.D.txt|G_ZDBY_2_235NQ002.D.txt|G_ZDBY_2_236NQ001.D.txt|G_ZDBY_2_236NQ002.D.txt', 604.0].txt"
     #"/user/root/model"
     #"/rezult"
@@ -128,7 +130,7 @@ file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
 #local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/太原/"
-local_dir1="/lf/test_3/20180119152742scenario_t10g7b3/"
+local_dir1="/lf/第三轮场景/20180119152843scenario_t10g7b3/"
 hdfs_dir1="/zd_data11.14/"
 
 ################################执行命令###############################
@@ -136,6 +138,8 @@ hdfs_dir1="/zd_data11.14/"
 if True:
    delete_hdfs(hdfs_path=deletefilename,addrs="sjfx1",port="50070")
    delete_hdfs(hdfs_path=deletefilename1,addrs="sjfx1",port="50070")
+   delete_hdfs(hdfs_path=deletefilename2,addrs="sjfx1",port="50070")
+   delete_hdfs(hdfs_path=deletefilename3,addrs="sjfx1",port="50070")
 
 if False:
 #单个本地文件上传

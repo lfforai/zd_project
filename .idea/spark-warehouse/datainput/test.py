@@ -189,10 +189,10 @@ y= random.rand(10240, 10240)
 # print(w.__len__())
 # print(w[0:int(w.__len__()/2)])
 
-x=[1,2,3,4]
-len=x.__len__()
-#print(list(x.reverse()[0:len-1]).reverse())
-print(x[0:len-1])
-x.pop(0)
-print(x)
+# x=[1,2,3,4]
+# len=x.__len__()
+# #print(list(x.reverse()[0:len-1]).reverse())
+# print(x[0:len-1])
+# x.pop(0)
+# print(x)
 

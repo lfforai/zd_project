@@ -559,7 +559,7 @@ def map_func(args, ctx):
                                            # (sum(mark_list_distance)>=list_length_first-1 and (self_distance<avg_var-1.0*ad_var or self_distance>avg_var+1.0*ad_var \
                                            #                                                    )))
                         #第二次开始
-                        if if_put==False:
+                        if if_put==False or True:
                             print("第二次判断开始---------------------------------------")
                             batch_ys=[[e[0],smooth(ttf_k_cf(e[1]),10)] for e in batch_ys]
 
