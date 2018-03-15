@@ -130,7 +130,7 @@ file_hdfsname="G_CFMY_1_001FQ001_S.txt"
 
 #整个文件夹上传
 #local_dir1="/media/root/4e73770f-a0a4-492c-b90b-4c93dccfaec32/lf/data/太原/"
-local_dir1="/lf/第三轮场景/20180119152843scenario_t10g7b3/"
+local_dir1="/lf/data/test_new1/"
 hdfs_dir1="/zd_data11.14/"
 
 ################################执行命令###############################

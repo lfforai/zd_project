@@ -330,8 +330,9 @@ dataset = dataset.shuffle(buffer_size=100000)
 dataset = dataset.batch(200)
 dataset = dataset.repeat(20)
 iterator = dataset.make_initializable_iterator()
+next_element=iterator.get_next()
 
-# with tf.Session() as sess:
+# with tf.Session() as sess:n
 #     # sess.run(iterator.initializer)
 #     for i in range(100):
 #         x,y=sess.run(iterator.get_next())
@@ -496,7 +497,7 @@ with tf.variable_scope("G", reuse=tf.AUTO_REUSE):
             for step in range(100000):
                 sess.run(init)
                 # 迭代 1000 次学习，sess.run optimizer
-                x_data, y_data = sess.run(iterator.get_next())
+                x_data, y_data = sess.run(next_element)
                 # print("x_data:=",x_data)
                 # print("y_data:=",y_data)
                 #sess.run(iterator.initializer)
